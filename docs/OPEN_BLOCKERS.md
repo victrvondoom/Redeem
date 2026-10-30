@@ -7,3 +7,10 @@
 6. No LLM wired: routing/planning are deterministic rules.
 7. Execution is synchronous in-request (no durable worker queue).
 8. Not built: task-graph compiler with dependency scheduling, billing domain, developer sandbox, PDF extraction, email-draft connector, human-handoff state, Voice Quality Lab labelled intent/entity datasets, charts beyond the benchmark bars, CI deploy job.
+
+## Added in Sprint 4
+9. Durable background jobs, outbox, dead-letter queue, execution leases, distributed tracing: **not built** (execution is synchronous; see DECISIONS.md). Justification: no long-running provider work exists until live connectors do.
+10. Circuit breaker and rate limiter are process-local (single instance only).
+11. Voice: no live-call evidence of interruption handling, language switching, or tool calls; agent definition export is unverified against a live Bolna account.
+12. Quality Lab has no latency/cost-per-verified-mission from live data (fixture timings only).
+13. Competitor repos were reviewed at source level but their deployed apps were not exercised.

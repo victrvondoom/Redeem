@@ -13,3 +13,7 @@
 | M10 | Isolated browser runtime | Provide an isolated browser service and set `REDEEM_ISOLATED_BROWSER_URL` | Cloud browser is BLOCKED by design without isolation | SSRF guard, gate | `GET /api/v1/browser/status` | P2 |
 | M11 | Native reviewers | Review hi/ta/te/Hinglish copy in `apps/web/lib/messages.ts` | Drafts are unreviewed | i18n resources | visual check per language | P1 |
 | M12 | Hackathon | Record demo video; submit application (Oct 31, 2026 per organiser page — re-check) | Human submission | Demo script in docs/demo | — | P0 |
+| M13 | Bolna dashboard | Create the agent from `python -m app.voice.agent_config https://<host> <secret>` (prompt + 6 tool definitions + webhook URL) | Agent must call REDEEM's tools | Export script + tests; schema modelled on another project's working agent, unverified | create agent, place a call, observe `start_mission` in the ledger | P0 |
+| M14 | Bolna / network | Set `BOLNA_WEBHOOK_ALLOWED_IPS` to Bolna's published source IPs (confirm from official docs; Ruko/Dukan READMEs cite them) and `REDEEM_TRUST_FORWARDED_FOR` only behind a trusted proxy | Defence in depth for unsigned webhooks | Allowlist code + test | webhook from another IP returns 403 | P1 |
+| M15 | Research | Interview ~10 travellers / small retailers | Wedge and willingness to pay are unvalidated | Narrative + analytics funnel | n/a | P0 |
+| M16 | Spend control | Decide daily call cap / wallet floor (Ruko reads `GET /user/me`) | Prevent runaway Bolna spend | Not implemented | n/a | P1 |

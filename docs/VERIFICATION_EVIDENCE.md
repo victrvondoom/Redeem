@@ -23,3 +23,28 @@
 | C − verifier | 120 | 90 | 0 | 0 | 30 | 0 |
 | C − reconcile | 150 | 60 | 0 | 0 | 0 | 0 |
 REDEEM's scores come from scenarios designed around its own mechanisms; they are not evidence of production reliability. Entity-binding, temporal-guard and ledger ablations were **not** run.
+
+
+# Sprint 4 evidence (commands run in this sandbox)
+| Check | Command | Result |
+|---|---|---|
+| Backend | `cd apps/api && python -m pytest -q` | **121 passed** |
+| Lint (py) | `ruff check app` | clean |
+| Types / build (web) | `npx tsc --noEmit`, `npx next build` | clean / compiled |
+| Lint (web) | `npx eslint .` | 0 errors, 8 warnings (fetch-on-mount) |
+| E2E | `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium npx playwright test` | **20 passed** (incl. demo A/B/C, mission control, evidence download, connector honesty, first-use checklist, 390/360 overflow) |
+| Migrations | `tests/test_migrations.py` (0001–0003, `alembic check`) | passed (SQLite only) |
+| Perf | `python scripts/perf.py` | create+plan p50 33.1 / p95 43.7 ms; full approve→execute→verify p50 89.3 / p95 116.6 ms; 200 concurrent reads 56 req/s; in-process SQLite, not a load test |
+| Visual QA | Playwright screenshot of the demo-A mission page at 1440px inspected (plan, alternatives, receipt, Evidence Center, agent activity render correctly); earlier sprint screenshots of other pages; overflow sweep covers all authenticated pages. **Known UX debt:** the ledger makes completed mission pages very long. |
+| Competitor review | 14 repos cloned read-only and inspected | docs/COMPETITOR_TEARDOWN.md |
+
+## Benchmark (seed 7, 7 scenarios x 30 = 210 trials per policy; local fixtures only)
+| Policy | n | Correct | Verified | Wrong target | Duplicates | False success | Unauthorized |
+|---|---|---|---|---|---|---|---|
+| A naive | 210 | 0 | 0 | 30 | 60 | 210 | 90 |
+| B checked | 210 | 60 | 60 | 30 | 0 | 150 | 90 |
+| C redeem | 210 | 210 | 90 | 0 | 0 | 0 | 0 |
+| C minus digest | 210 | 180 | 90 | 0 | 0 | 30 | 30 |
+| C minus verifier | 210 | 150 | 90 | 0 | 0 | 60 | 30 |
+| C minus reconcile | 210 | 210 | 60 | 0 | 0 | 0 | 0 |
+New scenarios this sprint: revoked connector, cross-domain dependency failure. Finding: without the independent verifier a dependent task (family message) fires on a refund that never happened. REDEEM's 210/210 is on scenarios built around its own controls, so it is not evidence of production reliability. Entity-binding, temporal-guard and ledger ablations were not run.

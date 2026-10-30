@@ -7,3 +7,9 @@
 - Webhooks: Bolna signing not assumed. Shared-secret token + read-back from Bolna; webhooks only update call bookkeeping.
 - Session-mint contract is from the published @bolna/web-call@3.0.1 README. POST /call and GET /executions/{id} are unverified against live docs (docs.bolna.ai unreachable from the build sandbox).
 - Same-origin Next.js rewrite keeps the session cookie HttpOnly and first-party.
+- S4: Agents are least-privilege *roles in one deterministic engine* (capability matrix + AGENT ledger events), not separate model processes; only `executor` holds `dispatch`.
+- S4: Task graph = per-action `depends_on` + sequential writes + concurrent read-only tasks (threads, separate sessions). A dependent action runs only if every dependency is VERIFIED.
+- S4: Mission corrections are revisions that supersede only unexecuted actions; verified work stays; the planner skips duplicate effects (e.g. refund already requested).
+- S4: Voice cannot approve anything; there is no approval tool. Voice tools only read, plan (start_mission/mission_reply) or pause (interrupt).
+- S4: No outbox/DLQ/lease infrastructure added: no long-running external work exists yet; revisit with the first live connector.
+- S4: Evidence categories follow the brief; "INFERRED" replaces "MODEL_INFERRED" because routing is rule-based (no model is wired in).

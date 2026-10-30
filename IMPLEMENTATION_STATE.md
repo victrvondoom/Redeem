@@ -1,7 +1,7 @@
 # Implementation state
 - Branch: claude/peaceful-turing-xnfcuc
 - Done: kernel, auth, both flagship missions on fixtures, recovery, Bolna adapter (mock-tested), web UI. Not done: G8–G11 mostly.
-- Verify: `cd apps/api && python -m pytest -q` (90 pass); `cd apps/web && npx tsc --noEmit && npx next build && PW_CHROMIUM_PATH=/opt/pw-browsers/chromium npx playwright test` (13 pass).
+- Verify: `cd apps/api && python -m pytest -q` (121 pass); `cd apps/web && npx tsc --noEmit && npx next build && PW_CHROMIUM_PATH=/opt/pw-browsers/chromium npx playwright test` (20 pass).
 - Credentials: none. Missing BOLNA_API_KEY, BOLNA_AGENT_ID, BOLNA_WEBHOOK_SECRET.
 - Sprint 2 so far: benchmark + methodology, Alembic migration, Docker files (untested), ledger preload and hotel "No charge" UI fixes.
 - Sprint 2 prompt was truncated at item 12; deployment scope unspecified.
@@ -9,3 +9,6 @@
 
 ## Sprint 3
 See docs/EXECUTION_LOG.md, OPEN_BLOCKERS.md, VERIFICATION_EVIDENCE.md, MANUAL_ACTIONS_LATER.md. Next exact action: implement the task-graph compiler (dependency-aware scheduling) in apps/api/app/orchestration/, then add remaining ablations (entity binding, temporal guard, ledger) to evals/runners/benchmark.py.
+
+## Sprint 4
+Last verified: 121 pytest, 20 Playwright, tsc/eslint/build green. Next exact action: with Bolna credentials run M1/M2/M13 (create agent from `python -m app.voice.agent_config`), place one live call, and only then change the bolna manifest condition from UNCONFIGURED. Without credentials: durable worker/outbox (apps/api/app/orchestration/), CallGrade-style intervals in Quality Lab, collapse the ledger on completed missions.

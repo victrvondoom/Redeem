@@ -38,3 +38,22 @@
 | Web lint | PASS (0 errors, 7 warnings) | eslint |
 | Task-graph compiler with dependency scheduling | NOT BUILT | — |
 | Billing, developer automation, email drafts, PDF extraction, human-handoff state | NOT BUILT | — |
+
+## Sprint 4 additions (all fixture-level unless stated; nothing LIVE_VERIFIED)
+| Feature | Status | Evidence |
+|---|---|---|
+| Agent roles with capability matrix (only executor dispatches; recovery lookup-only) + observable AGENT events | LOCALLY_TESTED | tests/test_sprint4.py |
+| Task-graph: dependency-gated writes, SKIPPED_DEPENDENCY, concurrent read-only tasks | LOCALLY_TESTED | pytest |
+| Mid-execution correction preserves completed work, voids stale approvals | LOCALLY_TESTED | pytest |
+| Mission control: pause / resume / reject / escalate (+ observer auto-escalation on contradictory evidence) | LOCALLY_TESTED + E2E | pytest, Playwright |
+| Evidence Center (5 trust categories, content hashes, JSON + Markdown report) | LOCALLY_TESTED + E2E | pytest, Playwright |
+| Connector manifests + health (UNCONFIGURED / FIXTURE_VERIFIED; none LIVE_VERIFIED) | LOCALLY_TESTED + E2E | pytest, Playwright |
+| Communication drafts (comms fixture; nothing sent) | LOCALLY_TESTED | pytest |
+| Demo scenarios A/B/C with reset, repeatable | LOCALLY_TESTED + E2E | pytest, Playwright |
+| Voice continuity tools: mission_reply (ordinal/reference resolution), read_back_plan (5 languages, cannot approve), interrupt | LOCALLY_TESTED (mock) — LIVE: UNCONFIGURED | tests |
+| Provider-independent voice interface; Bolna session-endpoint fallback; webhook IP allowlist; circuit breaker | LOCALLY_TESTED (mock) | tests |
+| Exportable Bolna agent tool definitions | IMPLEMENTED — UNVERIFIED against live Bolna | tests (shape only) |
+| Activation funnel from real events + first-use checklist | LOCALLY_TESTED + E2E | pytest, Playwright |
+| Benchmark: +revoked connector, +cross-domain dependency failure (7 scenarios) | LOCALLY_TESTED | evals/ |
+| Competitor teardown (14 repos, source-level) | DONE | docs/COMPETITOR_TEARDOWN.md |
+| NOT built: durable worker/outbox/DLQ/leases, tracing, entity-binding/temporal/ledger ablations, drift monitoring, judge calibration, collections/billing, deployment | — | docs/OPEN_BLOCKERS.md |

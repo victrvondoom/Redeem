@@ -7,12 +7,13 @@ Voice-first agent platform: understands a problem, prepares exact actions, asks 
 - Bolna adapter: session minting (key never reaches the browser), consent gate, call ledger, webhook with read-back. Tested with a mock transport only — **no live call has been made**; without credentials the UI shows `PROVIDER_NOT_CONFIGURED`.
 - Next.js UI: landing with working composer, console, mission workspace, voice studio, domains + payment-safety scan, connections, evidence vault, history, quality lab, settings.
 - Sprint 3: calendar + CRM + case-desk fixtures (cross-domain mission), safety engine, citation validator, SSRF guard, workflow library, Bolna tool endpoints, benchmark with ablations, Alembic migrations, Docker files (unbuilt), ESLint.
+- Sprint 4: multi-agent roles with a capability matrix, dependency-aware task graph, mission control (pause/resume/reject/escalate), Evidence Center with reports, connector manifests + health, three repeatable demo scenarios, voice continuity tools, competitor teardown (docs/COMPETITOR_TEARDOWN.md).
 - Not built / unverified: live Bolna calls, Postgres run, Docker build, real regulatory sources, isolated cloud browser, task-graph compiler, billing/developer domains (see FEATURE_MATRIX.md, docs/OPEN_BLOCKERS.md, docs/MANUAL_ACTIONS_LATER.md).
 
 ## Run
 ```bash
 python -m venv .venv && . .venv/bin/activate && pip install -r apps/api/requirements.txt
-cd apps/api && python -m pytest -q   # 90 tests
+cd apps/api && python -m pytest -q   # 121 tests
 alembic upgrade head   # optional; the app also creates tables on start
 uvicorn app.main:app --port 8000
 ```
