@@ -1,0 +1,18 @@
+# UNTESTED in the build sandbox (no Docker daemon). Postgres path is also unverified.
+services:
+  db:
+    image: postgres:16
+    environment: { POSTGRES_PASSWORD: redeem, POSTGRES_DB: redeem }
+    volumes: [pgdata:/var/lib/postgresql/data]
+  api:
+    build: ./apps/api
+    env_file: [.env]
+    environment:
+      REDEEM_DATABASE_URL: postgresql+psycopg://postgres:redeem@db:5432/redeem
+    depends_on: [db]
+    ports: ["8000:8000"]
+  web:
+    build: { context: ./apps/web, args: { REDEEM_API_URL: "http://api:8000" } }
+    depends_on: [api]
+    ports: ["3000:3000"]
+volumes: { pgdata: {} }

@@ -1,7 +1,10 @@
 # Tasks
 - [ ] Live Bolna web call verified (execution id correlated; webhook read-back advances status)
-- [ ] Alembic initial migration + Postgres test run
-- [ ] evals/: naive vs checked vs REDEEM + ablations, seeded, raw JSON
+- [x] Alembic initial migration (SQLite)
+- [ ] Postgres test run
+- [x] evals/ 3-policy benchmark with raw JSON
+- [ ] evals/ ablations + injection/cross-tenant scoring
+- [ ] Calendar connector for cross-domain flight/hotel/calendar mission
 - [ ] Docker Compose + deployment config
 - [ ] Native review of hi/ta/te copy; localise detail screens
 - [ ] Durable worker for long-running execution

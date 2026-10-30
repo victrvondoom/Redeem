@@ -28,6 +28,7 @@ export default function MissionPage({ params }: { params: Promise<{ id: string }
   }, [id]);
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => { api<{ items: LedgerEvent[] }>(`/missions/${id}/events`).then((r) => setEvents(r.items)).catch(() => undefined); }, [id]);
   useEffect(() => {
     const es = new EventSource(`/api/v1/missions/${id}/stream`);
     es.addEventListener("ledger", (ev) => {
@@ -154,7 +155,7 @@ function ActionRow({ a, lang, stale, checkable, checked, onCheck }: { a: PlanAct
         <div className="flex items-start gap-3">
           {checkable && <input type="checkbox" className="mt-1.5 h-5 w-5" checked={checked} onChange={(e) => onCheck(e.target.checked)} aria-label={`Include ${KIND_LABEL[a.kind] ?? a.kind}`} />}
           <div><p className="font-semibold">{KIND_LABEL[a.kind] ?? a.kind}</p><p className="text-sm text-muted">{target}</p></div></div>
-        <div className="text-right"><p className="font-bold">{inr(a.amount_paise, lang)}</p><StatusBadge status={a.status === "AWAITING_APPROVAL" ? "NEEDS_APPROVAL" : a.status} /></div>
+        <div className="text-right"><p className="font-bold">{a.amount_paise == null ? "No charge" : inr(a.amount_paise, lang)}</p><StatusBadge status={a.status === "AWAITING_APPROVAL" ? "NEEDS_APPROVAL" : a.status} /></div>
       </div>
       <p className="mt-2 text-xs text-muted">Approval is bound to digest <code>{a.digest.slice(0, 12)}…</code> · risk: {a.risk.replaceAll("_", " ")}</p>
     </li>

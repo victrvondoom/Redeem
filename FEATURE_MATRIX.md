@@ -12,5 +12,9 @@
 | Multilingual UI en/hi/hinglish/ta/te | LOCALLY_TESTED; no native review; detail screens mostly English | Playwright |
 | Live voice quality per language | BLOCKED (needs Bolna credentials) | — |
 | Payment-safety scanner | LOCALLY_TESTED (heuristic) | tests |
-| Legal citations, PDF parsing, workflow builder, benchmarks, Alembic, Postgres, worker, Docker, other domains | IDEA/SPECIFIED — not built | — |
+| Seeded policy benchmark (3 policies × 5 scenarios × 30 trials, raw JSON) | LOCALLY_TESTED (fixture only; REDEEM 150/150 on its own designed scenarios, so not evidence of general reliability) | evals/runners/benchmark.py, evals/METHODOLOGY.md, tests/test_benchmark.py |
+| Alembic initial migration (SQLite) | LOCALLY_TESTED (drift check) | tests/test_migrations.py |
+| Dockerfiles + compose (Postgres) | IMPLEMENTING — untested, no Docker daemon in sandbox | — |
+| Cross-domain mission (flight + hotel + calendar) | PARTIAL: flight + hotel in one mission; calendar not built | — |
+| Legal citations, PDF parsing, workflow builder, benchmark ablations, background worker, tool/function calling, post-call analysis, other domains, web lint, cloud-browser isolation | IDEA/SPECIFIED — not built | — |
 | Deployment | not done | — |
