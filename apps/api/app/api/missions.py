@@ -11,7 +11,7 @@ from ..core.security import limiter
 from ..db import SessionLocal
 from ..models import ActionEvent, Document, FxBooking, FxFault, Mission
 from ..orchestration import engine
-from ..orchestration.engine import TERMINAL, EngineError
+from ..orchestration.engine import TERMINAL
 from ..schemas import ApproveIn, BindIn, FaultIn, MissionIn, ReviseIn
 
 router = APIRouter(prefix="/api/v1/missions", tags=["missions"])

@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: 250 249 246; --ink: 23 33 43; --surface: 255 255 255; --soft: 241 243 241; --line: 224 227 224;
+  --indigo: 52 72 165; --indigo-soft: 232 235 248; --deep: 20 35 59; --teal: 8 127 117; --teal-soft: 224 242 240;
+  --amber: 239 163 74; --amber-soft: 253 241 224; --muted: 100 113 124; --danger: 183 45 45; --danger-soft: 252 234 234;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: 15 22 30; --ink: 236 240 244; --surface: 23 33 43; --soft: 31 43 56; --line: 48 62 78;
+    --indigo: 140 160 240; --indigo-soft: 36 48 90; --deep: 8 14 22; --teal: 70 205 190; --teal-soft: 14 52 50;
+    --amber: 240 176 98; --amber-soft: 58 42 18; --muted: 160 174 186; --danger: 255 140 130; --danger-soft: 66 28 28;
+  }
+}
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body { @apply bg-bg text-ink font-sans antialiased; line-height: 1.6; }
+:lang(hi), :lang(ta), :lang(te) { line-height: 1.75; }
+:focus-visible { outline: 2px solid rgb(var(--indigo)); outline-offset: 2px; border-radius: 6px; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+@layer components {
+  .btn { @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-primary { @apply btn bg-deep text-white hover:bg-indigo; }
+  :root:not([data-theme="light"]) .btn-primary { color: rgb(var(--bg)); background: rgb(var(--ink)); }
+  .btn-ghost { @apply btn border border-line bg-surface text-ink hover:bg-soft; }
+  .btn-teal { @apply btn bg-teal text-white hover:opacity-90; }
+  .card { @apply rounded-2xl border border-line bg-surface p-6 shadow-card; }
+  .badge { @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold; }
+  .input { @apply min-h-[44px] w-full rounded-xl border border-line bg-surface px-4 text-[15px] text-ink placeholder:text-muted; }
+  .label { @apply mb-1.5 block text-sm font-semibold; }
+  .h-eyebrow { @apply text-sm font-semibold tracking-wide text-teal; }
+}
+@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgb(var(--teal) / 0.45); } 100% { box-shadow: 0 0 0 16px rgb(var(--teal) / 0); } }
+.listening { animation: pulse-ring 1.4s ease-out infinite; }
