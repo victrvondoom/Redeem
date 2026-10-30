@@ -1,0 +1,80 @@
+from typing import Literal
+
+from pydantic import BaseModel, Field, field_validator
+
+Lang = Literal["en", "hi", "hinglish", "ta", "te"]
+
+
+class _Strict(BaseModel):
+    model_config = {"extra": "forbid"}
+
+
+class RegisterIn(_Strict):
+    email: str = Field(min_length=5, max_length=320, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    password: str = Field(min_length=10, max_length=200)
+    name: str = Field(min_length=1, max_length=120)
+    language: Lang = "en"
+
+    @field_validator("email")
+    @classmethod
+    def lower(cls, v):
+        return v.strip().lower()
+
+
+class LoginIn(_Strict):
+    email: str = Field(max_length=320)
+    password: str = Field(max_length=200)
+
+
+class LangIn(_Strict):
+    language: Lang
+
+
+class MissionIn(_Strict):
+    intent: str = Field(min_length=3, max_length=2000)
+    language: Lang = "en"
+    source: Literal["text", "voice"] = "text"
+    transcript_confidence: float | None = Field(None, ge=0, le=1)
+    document_id: str | None = None
+
+
+class ReviseIn(_Strict):
+    intent: str | None = Field(None, min_length=3, max_length=2000)
+    confirm_transcript: bool = False
+
+
+class BindIn(_Strict):
+    role: str = Field(max_length=40)
+    value: str = Field(max_length=120)
+
+
+class ApprovalItem(_Strict):
+    action_id: str
+    digest: str = Field(min_length=64, max_length=64)
+
+
+class ApproveIn(_Strict):
+    approvals: list[ApprovalItem] = Field(min_length=1, max_length=20)
+
+
+class FaultIn(_Strict):
+    kind: Literal["ack_loss", "silent_drop"]
+
+
+class ConsentIn(_Strict):
+    purpose: Literal["voice_call", "call_recording"]
+    granted: bool
+
+
+class AttachIn(_Strict):
+    execution_id: str = Field(min_length=3, max_length=80, pattern=r"^[A-Za-z0-9_\-]+$")
+
+
+class OutboundIn(_Strict):
+    phone: str = Field(pattern=r"^\+[1-9]\d{7,14}$")
+    mission_id: str | None = None
+    language: Lang = "en"
+
+
+class ScanIn(_Strict):
+    text: str = Field(min_length=1, max_length=5000)
