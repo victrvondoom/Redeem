@@ -16,7 +16,7 @@ from ..models import (Action, ActionApproval, ActionEvent, AuditEvent, AuthSessi
                       Connection, Document, FxBooking, FxCustomer, FxFault, FxProduct, FxRequest, FxReservation,
                       Membership, Mission, MissionRevision, ProviderOperation, Tenant, User, VerificationClaim,
                       Workspace)
-from ..models import FxCalendarEvent, FxCase, FxLead
+from ..models import FxCalendarEvent, FxCase, FxContact, FxFlightOption, FxLead, FxMessage
 from ..policy.payment_safety import scan
 from ..schemas import ScanIn
 
@@ -214,7 +214,7 @@ def export(ctx: Ctx = Depends(current_ctx)):
 def _purge_tenant(db, t: str) -> None:
     for model in (CallEvent, VerificationClaim, ProviderOperation, ActionApproval, ActionEvent, Action,
                   MissionRevision, Mission, Document, Call, ConsentRecord, FxFault, FxRequest, FxReservation,
-                  FxBooking, FxProduct, FxCustomer, FxCalendarEvent, FxLead, FxCase, RegSource, Connection):
+                  FxBooking, FxProduct, FxCustomer, FxCalendarEvent, FxLead, FxCase, FxContact, FxMessage, FxFlightOption, RegSource, Connection):
         db.execute(delete(model).where(model.tenant_id == t))
 
 

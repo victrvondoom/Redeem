@@ -1,3 +1,5 @@
+import re
+
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
@@ -8,7 +10,8 @@ from ..core.security import limiter, safe_equal
 from ..db import get_db
 from ..models import Call, ConsentRecord, Mission
 from ..schemas import AttachIn, ConsentIn, OutboundIn
-from ..voice import bolna
+from ..voice import bolna, provider
+from ..voice.prompts import read_back
 from ..voice.service import apply_call_update
 
 router = APIRouter(prefix="/api/v1", tags=["voice"])
@@ -60,8 +63,7 @@ def mint_session(request: Request, ctx: Ctx = Depends(current_ctx)):
     if not _consented(ctx, "voice_call"):
         raise err(403, "consent_required", "Consent to an AI voice call is required first")
     try:
-        client = bolna.make_client()
-        session = client.mint_web_session()
+        session = provider.get_provider().mint_web_session()
     except bolna.BolnaError as e:
         _raise(e)
     call = Call(tenant_id=ctx.tenant_id, user_id=ctx.user.id, kind="web", language=ctx.user.language,
@@ -107,7 +109,7 @@ def outbound(body: OutboundIn, ctx: Ctx = Depends(current_ctx)):
                                                                       Mission.tenant_id == ctx.tenant_id)):
         raise err(404, "not_found", "Mission not found")
     try:
-        data = bolna.make_client().start_outbound(body.phone, {"language": body.language,
+        data = provider.get_provider().start_outbound(body.phone, {"language": body.language,
                                                                "ai_disclosure": "This is an AI assistant."})
     except bolna.BolnaError as e:
         _raise(e)
@@ -139,7 +141,7 @@ def sync_call(call_id: str, ctx: Ctx = Depends(current_ctx)):
     if not c.execution_id:
         raise err(409, "not_correlated", "Call has no provider execution id yet")
     try:
-        data = bolna.make_client().get_execution(c.execution_id)
+        data = provider.get_provider().get_execution(c.execution_id)
     except bolna.BolnaError as e:
         _raise(e)
     outcome = apply_call_update(ctx.db, c, data, authoritative=True)
@@ -156,6 +158,13 @@ async def bolna_webhook(request: Request, token: str = Query("", max_length=200)
         raise err(503, "webhook_not_configured", "Webhook ingress is not configured")
     if not safe_equal(token, settings.bolna_webhook_secret):
         raise err(401, "invalid_webhook_token", "Invalid webhook credentials")
+    allowed = {ip.strip() for ip in settings.bolna_webhook_allowed_ips.split(",") if ip.strip()}
+    if allowed:
+        src = request.client.host if request.client else ""
+        if settings.trust_forwarded_for and request.headers.get("x-forwarded-for"):
+            src = request.headers["x-forwarded-for"].split(",")[0].strip()
+        if src not in allowed:
+            raise err(403, "source_not_allowed", "Source address is not allowed")
     raw = await request.body()
     if len(raw) > 256_000:
         raise err(413, "payload_too_large", "Payload too large")
@@ -172,7 +181,7 @@ async def bolna_webhook(request: Request, token: str = Query("", max_length=200)
     if not call:
         return {"accepted": False, "reason": "unknown_execution"}
     try:
-        authoritative_data = bolna.make_client().get_execution(ex)
+        authoritative_data = provider.get_provider().get_execution(ex)
         outcome = apply_call_update(db, call, authoritative_data, authoritative=True)
     except bolna.BolnaError:
         outcome = apply_call_update(db, call, {"status": str(payload.get("status", "unknown")), "unverified": True},
@@ -225,4 +234,36 @@ async def voice_tool(tool: str, request: Request, token: str = Query("", max_len
         db.commit()
         return {"mission_id": m.id, "status": m.status, "needs": (m.clarification or {}).get("message"),
                 "plan_summary": (m.plan or {}).get("summary"), "note": "Awaiting the user's approval in the REDEEM app."}
+    if tool in ("mission_reply", "read_back_plan", "interrupt"):
+        m = db.get(Mission, call.mission_id) if call.mission_id else None
+        if not m or m.tenant_id != t:
+            raise err(409, "no_active_mission", "This call has no active mission yet; call start_mission first")
+        user = db.get(User, call.user_id)
+        if tool == "read_back_plan":
+            acts = (m.plan or {}).get("actions", [])
+            pend = [a for a in acts if a["status"] == "AWAITING_APPROVAL"]
+            if not pend:
+                return {"spoken": None, "note": "Nothing awaiting approval.", "status": m.status}
+            a = pend[0] if not args.get("second") else pend[min(1, len(pend) - 1)]
+            p = a["params"]
+            who = p.get("passenger_name") or p.get("customer_name") or p.get("lead_name") or p.get("contact_name") or p.get("title") or a["kind"]
+            amt = f"₹{a['amount_paise'] / 100:,.2f}" if a.get("amount_paise") else None
+            return {"spoken": read_back(m.language_selected, a["kind"].replace("_", " "), str(who), amt), "can_approve_by_voice": False, "status": m.status}
+        if tool == "interrupt":
+            engine.pause(db, m)
+            engine.emit(db, m, "VOICE_INTERRUPT", {"call": call.id})
+            db.commit()
+            return {"paused": True, "note": "Stopped. Tell me the new instruction; nothing further will run until you resume in the app."}
+        text = str(args.get("text", ""))[:500]
+        ref = engine.resolve_reference(m, text)
+        try:
+            if ref:
+                engine.bind(db, m, ref[0], ref[1])
+            elif re.search(r"\b(actually|instead|wait|no,|change|don't|do not)\b", text, re.I):
+                engine.revise(db, m, intent=f"{m.intent}. Correction: {text}", reason="voice_correction")
+            else:
+                return {"understood": False, "ask": "Which one do you mean? You can say 'the second option' or give the name."}
+        finally:
+            db.commit()
+        return {"understood": True, "status": m.status, "revision": m.revision, "needs": (m.clarification or {}).get("message")}
     raise err(404, "unknown_tool", "Unknown tool")

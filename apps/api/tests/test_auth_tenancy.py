@@ -1,4 +1,4 @@
-from conftest import Api, approve_all, pick
+from conftest import approve_all
 
 
 def test_register_login_logout_and_session(api):

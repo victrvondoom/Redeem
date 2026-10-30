@@ -96,6 +96,8 @@ class Mission(Base):
     plan: Mapped[dict] = mapped_column(JSON, default=dict)
     clarification: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     outcome: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    paused: Mapped[bool] = mapped_column(Boolean, default=False)
+    escalated: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
 
@@ -131,6 +133,7 @@ class Action(Base):
     idempotency_key: Mapped[str] = mapped_column(String(80))
     digest: Mapped[str] = mapped_column(String(64))
     position: Mapped[int] = mapped_column(Integer, default=0)
+    depends_on: Mapped[list] = mapped_column(JSON, default=list)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
 
 
@@ -394,3 +397,37 @@ class RegSource(Base):
     published: Mapped[str] = mapped_column(String(20))
     passage: Mapped[str] = mapped_column(Text)
     is_fixture: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class FxContact(Base):
+    __tablename__ = "fx_contacts"
+    id: Mapped[str] = _id("ctc")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    name: Mapped[str] = mapped_column(String(200))
+    relation: Mapped[str] = mapped_column(String(40))
+    phone_last4: Mapped[str] = mapped_column(String(4))
+
+
+class FxMessage(Base):
+    """Prepared message drafts. REDEEM has no messaging provider: drafts are stored, never sent."""
+
+    __tablename__ = "fx_messages"
+    __table_args__ = (UniqueConstraint("tenant_id", "idempotency_key"),)
+    id: Mapped[str] = _id("msg")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    contact_id: Mapped[str] = mapped_column(String(40))
+    body: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(20), default="DRAFTED")
+    idempotency_key: Mapped[str] = mapped_column(String(80))
+    ref: Mapped[str] = mapped_column(String(30))
+
+
+class FxFlightOption(Base):
+    __tablename__ = "fx_flight_options"
+    id: Mapped[str] = _id("opt")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    route: Mapped[str] = mapped_column(String(80))
+    flight_no: Mapped[str] = mapped_column(String(20))
+    departs: Mapped[str] = mapped_column(String(40))
+    price_paise: Mapped[int] = mapped_column(BigInteger)
+    seats: Mapped[int] = mapped_column(Integer)

@@ -1,7 +1,8 @@
 """Per-tenant fixture data. Fictional airline, hotel and shop; no real people or numbers."""
 from sqlalchemy.orm import Session
 
-from ..models import Connection, FxBooking, FxCalendarEvent, FxCustomer, FxLead, FxProduct, RegSource
+from ..models import (Connection, FxBooking, FxCalendarEvent, FxContact, FxCustomer, FxFlightOption, FxLead, FxProduct,
+                      RegSource)
 
 POLICY_DOCS = [{
     "id": "fixture-air-refund-policy-v1",
@@ -28,6 +29,10 @@ def seed_tenant(db: Session, tenant_id: str) -> None:
     db.add_all([flight_a, flight_b, flight_c])
     db.flush()
     db.add(FxCalendarEvent(tenant_id=tenant_id, title="Flight FA2041 Mumbai → Chennai", linked_booking_id=flight_a.id))
+    db.add_all([FxContact(tenant_id=tenant_id, name="Sunita Rao", relation="family", phone_last4="6031"),
+                FxFlightOption(tenant_id=tenant_id, route="Mumbai → Chennai", flight_no="FA2105", departs="2026-11-09 07:40", price_paise=920000, seats=4),
+                FxFlightOption(tenant_id=tenant_id, route="Mumbai → Chennai", flight_no="FA2119", departs="2026-11-09 18:10", price_paise=864000, seats=0),
+                FxFlightOption(tenant_id=tenant_id, route="Mumbai → Chennai", flight_no="FA2133", departs="2026-11-10 06:15", price_paise=799000, seats=9)])
     db.add_all([FxLead(tenant_id=tenant_id, name="Ravi Kumar", phone_last4="2290"),
                 FxLead(tenant_id=tenant_id, name="Ravi Kumar", phone_last4="7714"),
                 FxLead(tenant_id=tenant_id, name="Meera Joshi", phone_last4="5503", stage="QUALIFIED")])
@@ -54,5 +59,6 @@ def seed_tenant(db: Session, tenant_id: str) -> None:
                              ("calendar_fixture", ["calendar:read", "calendar:write"]),
                              ("crm_fixture", ["crm:read", "crm:write"]),
                              ("casedesk_fixture", ["case:write"]),
+                             ("comms_fixture", ["message:draft"]),
                              ("retail_fixture", ["catalogue:read", "stock:reserve", "crm:write"])):
         db.add(Connection(tenant_id=tenant_id, provider=provider, kind="fixture", scopes=scopes))

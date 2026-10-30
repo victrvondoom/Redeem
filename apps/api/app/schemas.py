@@ -86,3 +86,8 @@ class StartWorkflowIn(_Strict):
 
 class UrlCheckIn(_Strict):
     url: str = Field(min_length=1, max_length=2000)
+
+
+class RejectIn(_Strict):
+    action_ids: list[str] = Field(min_length=1, max_length=20)
+    reason: str = Field("", max_length=200)

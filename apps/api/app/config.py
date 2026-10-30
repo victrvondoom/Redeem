@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     bolna_base_url: str = Field("https://api.bolna.ai", validation_alias="BOLNA_BASE_URL")
     bolna_webhook_secret: str = Field("", validation_alias="BOLNA_WEBHOOK_SECRET")
     bolna_timeout_seconds: float = Field(10.0, validation_alias="BOLNA_TIMEOUT_SECONDS")
+    # Bolna does not sign webhooks; optionally restrict by source IP (comma-separated). Empty = off.
+    bolna_webhook_allowed_ips: str = Field("", validation_alias="BOLNA_WEBHOOK_ALLOWED_IPS")
+    trust_forwarded_for: bool = Field(False, validation_alias="REDEEM_TRUST_FORWARDED_FOR")
     allow_outbound_calls: bool = Field(False, validation_alias="REDEEM_ALLOW_OUTBOUND_CALLS")
     # Comma separated E.164 numbers owned/authorised by the operator. Nothing else may be dialled.
     outbound_test_numbers: str = Field("", validation_alias="REDEEM_OUTBOUND_TEST_NUMBERS")

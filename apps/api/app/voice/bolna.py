@@ -18,7 +18,36 @@ class BolnaError(Exception):
         self.code, self.status, self.scope = code, status, scope
 
 
+class CircuitBreaker:
+    """Opens after `threshold` consecutive provider failures; half-opens after `cooldown` seconds."""
+
+    def __init__(self, threshold: int = 3, cooldown: float = 30.0, clock=None):
+        import time
+        self.threshold, self.cooldown, self.clock = threshold, cooldown, clock or time.monotonic
+        self.failures, self.opened_at = 0, None
+
+    def allow(self) -> bool:
+        if self.opened_at is None:
+            return True
+        if self.clock() - self.opened_at >= self.cooldown:
+            return True  # half-open: allow one probe
+        return False
+
+    def record(self, ok: bool) -> None:
+        if ok:
+            self.failures, self.opened_at = 0, None
+        else:
+            self.failures += 1
+            if self.failures >= self.threshold:
+                self.opened_at = self.clock()
+
+
+BREAKER = CircuitBreaker()
+
+
 class BolnaClient:
+    name = "bolna"
+
     def __init__(self, base_url: str, api_key: str, agent_id: str, timeout: float = 10.0,
                  transport: httpx.BaseTransport | None = None):
         self.base_url, self.agent_id = base_url.rstrip("/"), agent_id
@@ -26,6 +55,18 @@ class BolnaClient:
                                   headers={"Authorization": f"Bearer {api_key}"})
 
     def _request(self, method: str, path: str, **kw) -> dict:
+        if not BREAKER.allow():
+            raise BolnaError("provider_circuit_open", 503, "Voice provider temporarily unavailable; retry shortly")
+        try:
+            out = self._request_once(method, path, **kw)
+        except BolnaError as e:
+            if e.code in ("provider_timeout", "provider_unavailable"):
+                BREAKER.record(False)
+            raise
+        BREAKER.record(True)
+        return out
+
+    def _request_once(self, method: str, path: str, **kw) -> dict:
         try:
             r = self._http.request(method, path, **kw)
         except httpx.TimeoutException as e:
@@ -52,7 +93,12 @@ class BolnaClient:
         body: dict = {"agent_id": self.agent_id}
         if user_data:
             body["user_data"] = user_data
-        return self._request("POST", "/web-call/freeswitch-session", json=body)
+        try:  # the SDK contract names /freeswitch-session; the API docs name /web-call/session (seen in other projects' code)
+            return self._request("POST", "/web-call/freeswitch-session", json=body)
+        except BolnaError as e:
+            if e.code != "provider_rejected" or e.status != 502 or "404" not in str(e):
+                raise
+            return self._request("POST", "/web-call/session", json=body)
 
     def start_outbound(self, phone: str, user_data: dict | None = None) -> dict:
         body: dict = {"agent_id": self.agent_id, "recipient_phone_number": phone}

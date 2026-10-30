@@ -4,7 +4,6 @@ import pytest
 from app.config import settings
 from app.models import Action, ActionApproval, Call, CallEvent
 from app.voice import bolna
-from conftest import Api
 
 
 def configure(handler, secret="whsec-test"):

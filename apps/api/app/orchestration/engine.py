@@ -6,6 +6,7 @@ trusts a provider's own acknowledgement as proof of an outcome.
 """
 import re
 from datetime import datetime, timedelta, timezone
+from concurrent.futures import ThreadPoolExecutor
 from typing import Callable
 
 from sqlalchemy import select
@@ -16,13 +17,15 @@ from ..connectors.base import ProviderRejected, ProviderTimeout, canonical, sha2
 from ..connectors.booking import BookingConnector
 from ..connectors.calendar import CalendarConnector
 from ..connectors.casedesk import CaseDeskConnector
+from ..connectors.comms import CommsConnector
 from ..connectors.crm import CrmConnector
 from ..connectors.retail import RetailConnector
-from ..db import utcnow
+from ..db import SessionLocal, utcnow
 from ..domains.language import detect_language, route_domains
 from ..fixtures.seed import POLICY_DOCS
-from ..models import (Action, ActionApproval, ActionEvent, Connection, FxBooking, FxCustomer, FxLead, FxProduct,
+from ..models import (Action, ActionApproval, ActionEvent, Connection, FxBooking, FxContact, FxCustomer, FxFlightOption, FxLead, FxProduct,
                       Mission, MissionRevision, ProviderOperation, RegSource, VerificationClaim)
+from . import agents
 from ..policy import citations as cite
 from ..policy import safety
 
@@ -38,7 +41,7 @@ TRANSITIONS: dict[str, set[str]] = {
     "PLAN_READY": {"NEEDS_APPROVAL", "FAILED", "CANCELLED"},
     "NEEDS_APPROVAL": {"AUTHORIZED", "CANCELLED", "FAILED"},
     "AUTHORIZED": {"EXECUTING", "NEEDS_APPROVAL", "CANCELLED"},
-    "EXECUTING": {"OBSERVING", "UNCERTAIN", "FAILED", "NEEDS_APPROVAL"},
+    "EXECUTING": {"OBSERVING", "UNCERTAIN", "FAILED", "NEEDS_APPROVAL", "AUTHORIZED"},
     "OBSERVING": {"VERIFIED", "PARTIALLY_VERIFIED", "UNCERTAIN", "FAILED"},
     "UNCERTAIN": {"OBSERVING", "FAILED", "CANCELLED"},
 }
@@ -76,7 +79,7 @@ def transition(db: Session, m: Mission, new: str, reason: str = "") -> None:
 
 def connector_for(name: str, db: Session, tenant_id: str):
     return {"booking_fixture": BookingConnector, "retail_fixture": RetailConnector, "calendar_fixture": CalendarConnector,
-            "crm_fixture": CrmConnector, "casedesk_fixture": CaseDeskConnector}[name](db, tenant_id)
+            "crm_fixture": CrmConnector, "casedesk_fixture": CaseDeskConnector, "comms_fixture": CommsConnector}[name](db, tenant_id)
 
 
 def connection_active(db: Session, tenant_id: str, provider: str) -> bool:
@@ -305,8 +308,32 @@ def _new_action(db: Session, m: Mission, pos: int, kind: str, connector: str, pa
 
 
 def _action_view(a: Action) -> dict:
-    return {"id": a.id, "kind": a.kind, "connector": a.connector, "params": a.params, "amount_paise": a.amount_paise,
+    return {"id": a.id, "depends_on": a.depends_on or [], "kind": a.kind, "connector": a.connector, "params": a.params, "amount_paise": a.amount_paise,
             "risk": a.risk, "status": a.status, "digest": a.digest, "revision": a.revision, "position": a.position}
+
+
+def run_reads(tenant_id: str, booking_id: str | None) -> dict:
+    """Independent read-only tasks run concurrently (separate sessions); writes are never parallelised."""
+    import time
+
+    def alternatives():
+        with SessionLocal() as s:
+            return [{"flight": o.flight_no, "route": o.route, "departs": o.departs, "price_paise": o.price_paise, "seats": o.seats,
+                     "bookable": o.seats > 0} for o in s.scalars(select(FxFlightOption).where(FxFlightOption.tenant_id == tenant_id))]
+
+    def policy():
+        return [{"id": d["id"], "title": d["title"], "is_fixture": True} for d in POLICY_DOCS]
+
+    def calendar():
+        with SessionLocal() as s:
+            ev = CalendarConnector(s, tenant_id).for_booking(booking_id) if booking_id else None
+            return {"event_id": ev.id, "status": ev.status} if ev else None
+
+    t0 = time.perf_counter()
+    with ThreadPoolExecutor(3) as ex:
+        futs = {"alternatives": ex.submit(alternatives), "policy": ex.submit(policy), "calendar": ex.submit(calendar)}
+        results = {k: f.result() for k, f in futs.items()}
+    return {"tasks": list(futs), "results": results, "wall_ms": round((time.perf_counter() - t0) * 1000, 2)}
 
 
 def build_plan(db: Session, m: Mission) -> None:
@@ -341,6 +368,19 @@ def build_plan(db: Session, m: Mission) -> None:
                     "event_id": ev.id, "title": ev.title, "change": "mark_cancelled_needs_rebook"}, ev.id, None, "calendar_change"))
             else:
                 notes.append("No calendar event is linked to this booking, so no calendar change was planned.")
+        refund_a = next((a for a in actions if a.kind == "refund_request"), None)
+        if re.search(r"inform|notify|tell (my|the)|let .{0,20}know|family|parents|परिवार|குடும்ப|కుటుంబ", m.intent, re.I):
+            fam = list(db.scalars(select(FxContact).where(FxContact.tenant_id == t, FxContact.relation == "family")))
+            if len(fam) == 1:
+                body = (f"Update: my flight {b.ref} was cancelled by the airline. A refund request has been prepared. "
+                        "I will share confirmations once they are verified.")
+                n = _new_action(db, m, len(actions), "notify_contact", "comms_fixture", {
+                    "contact_id": fam[0].id, "contact_name": fam[0].name, "body": body}, fam[0].id, None, "communication")
+                n.depends_on = [refund_a.id] if refund_a else []
+                actions.append(n)
+                notes.append("The message is stored as a draft for your family contact; REDEEM has no messaging provider and does not send it.")
+            else:
+                notes.append("No single family contact is on file, so no message was planned.")
         blocked.append({"kind": "voice_call_airline", "status": "BLOCKED",
                         "reason": "PROVIDER_NOT_CONFIGURED" if not settings.bolna_configured
                         else "NO_AUTHORISED_DESTINATION",
@@ -398,7 +438,18 @@ def build_plan(db: Session, m: Mission) -> None:
         notes.append("Effects occur in a local stateful shop fixture.")
     for a in actions:
         emit(db, m, "POLICY", safety.evaluate_action(a.kind, a.params, a.risk).as_dict(), a.id)
-    m.plan = {"summary": summary, "actions": [_action_view(a) for a in actions], "blocked": blocked,
+    reads = run_reads(t, m.bindings.get("booking_id")) if m.scenario == "flight_recovery" else {}
+    if reads:
+        emit(db, m, "READS_COMPLETED", {"concurrent": True, "tasks": list(reads["tasks"]), "wall_ms": reads["wall_ms"]})
+    graph = [{"id": a.id, "kind": a.kind, "depends_on": a.depends_on, "mode": "write"} for a in actions]
+    agents.say(db, m, "planner", "task_graph_compiled", {"nodes": len(graph), "edges": sum(len(g["depends_on"]) for g in graph),
+                                                         "independent_writes": sum(1 for g in graph if not g["depends_on"])})
+    for dom in sorted({a.connector.replace("_fixture", "") for a in actions}):
+        agents.say(db, m, "specialist", "prepared_actions", {"actions": [a.kind for a in actions if a.connector.startswith(dom)]}, specialist=dom)
+    memory = agents.recall(db, m)
+    if memory:
+        notes.append(f"Memory: {len(memory)} earlier verified action(s) already exist for these targets.")
+    m.plan = {"summary": summary, "graph": graph, "reads": reads.get("results", {}) if reads else {}, "actions": [_action_view(a) for a in actions], "blocked": blocked,
               "notes": notes, "policy_citations": citations}
     emit(db, m, "PLAN_READY", {"revision": m.revision, "action_ids": [a.id for a in actions]})
     transition(db, m, "PLAN_READY")
@@ -534,6 +585,9 @@ def _actions(db: Session, m: Mission, revision: int | None = None) -> list[Actio
 def execute(db: Session, m: Mission, before_dispatch: Callable[[Action], None] | None = None) -> None:
     if m.status != "AUTHORIZED":
         raise EngineError(409, "not_authorized", f"Mission is {m.status}")
+    if m.paused:
+        raise EngineError(409, "mission_paused", "Mission is paused; resume it first")
+    agents.require("executor", "dispatch")
     transition(db, m, "EXECUTING")
     db.commit()
     started_revision = m.revision
@@ -542,6 +596,19 @@ def execute(db: Session, m: Mission, before_dispatch: Callable[[Action], None] |
             before_dispatch(a)
         db.refresh(m)
         db.refresh(a)
+        if m.paused:
+            emit(db, m, "EXECUTION_PAUSED", {"before_action": a.kind}, a.id)
+            agents.say(db, m, "executor", "paused_before_dispatch", {"action": a.kind}, a.id)
+            transition(db, m, "AUTHORIZED", "paused")
+            db.commit()
+            return
+        deps = [db.get(Action, d) for d in (a.depends_on or [])]
+        if any(d is None or d.status != "VERIFIED" for d in deps):
+            a.status = "SKIPPED_DEPENDENCY"
+            emit(db, m, "SKIPPED_DEPENDENCY", {"waiting_on": [d.kind for d in deps if d is None or d.status != "VERIFIED"]}, a.id)
+            agents.say(db, m, "planner", "dependent_task_skipped", {"action": a.kind}, a.id)
+            db.commit()
+            continue
         if m.revision != started_revision or a.status != "AUTHORIZED":
             emit(db, m, "EXECUTION_ABORTED_STALE", {"started_revision": started_revision,
                                                     "current_revision": m.revision}, a.id)
@@ -596,6 +663,7 @@ def execute(db: Session, m: Mission, before_dispatch: Callable[[Action], None] |
         op.status, op.provider_ref, op.finished_at, op.response = "ACKED", receipt.get("ref"), utcnow(), receipt
         a.status = "AWAITING_PROVIDER"
         emit(db, m, "ACKED", {"provider_ref": receipt.get("ref")}, a.id)
+        agents.say(db, m, "executor", "dispatched", {"action": a.kind, "idempotency_key": a.idempotency_key}, a.id)
         db.commit()
         verify_action(db, m, a, snapshot)
     finalize(db, m)
@@ -604,6 +672,8 @@ def execute(db: Session, m: Mission, before_dispatch: Callable[[Action], None] |
 
 def reconcile_action(db: Session, m: Mission, a: Action, snapshot: dict, attempts: int = 3) -> None:
     """Read-only lookup by idempotency key. Never resubmits."""
+    agents.require("recovery", "read_lookup")
+    agents.say(db, m, "recovery", "reconcile_by_lookup", {"action": a.kind}, a.id)
     conn = connector_for(a.connector, db, m.tenant_id)
     found = None
     for i in range(attempts):  # bounded; backoff is a no-op for the in-process fixture
@@ -624,6 +694,7 @@ def reconcile_action(db: Session, m: Mission, a: Action, snapshot: dict, attempt
 
 
 def verify_action(db: Session, m: Mission, a: Action, snapshot: dict) -> None:
+    agents.require("verifier", "read_verify")
     conn = connector_for(a.connector, db, m.tenant_id)
     result, evidence = conn.verify(a.kind, a.params, a.idempotency_key, snapshot)
     if _ablated("no_verifier"):  # ablation: trust the provider's acknowledgement instead of the read-back
@@ -632,6 +703,9 @@ def verify_action(db: Session, m: Mission, a: Action, snapshot: dict) -> None:
                              claim=f"{a.kind} applied at provider as approved", result=result, evidence=evidence))
     a.status = "VERIFIED" if result == "VERIFIED" else "FAILED"
     emit(db, m, "VERIFIED" if result == "VERIFIED" else "VERIFICATION_FAILED", evidence, a.id)
+    agents.say(db, m, "verifier", "independent_readback", {"result": result}, a.id)
+    op = db.scalar(select(ProviderOperation).where(ProviderOperation.action_id == a.id))
+    agents.observe(db, m, a, op.status if op else None)
     db.commit()
 
 
@@ -651,7 +725,7 @@ HEADLINES = {
 
 def finalize(db: Session, m: Mission) -> None:
     acts = _actions(db, m)
-    executed = [a for a in acts if a.status in ("VERIFIED", "FAILED", "UNCERTAIN", "BLOCKED")]
+    executed = [a for a in acts if a.status in ("VERIFIED", "FAILED", "UNCERTAIN", "BLOCKED", "SKIPPED_DEPENDENCY")]
     if m.status == "EXECUTING":
         transition(db, m, "OBSERVING")
     if any(a.status == "UNCERTAIN" for a in acts):
@@ -742,5 +816,65 @@ def mission_view(db: Session, m: Mission) -> dict:
         "language_selected": m.language_selected, "language_detected": m.language_detected, "source": m.source,
         "domains": m.domains, "bindings": m.bindings, "clarification": m.clarification,
         "plan": {**(m.plan or {}), "actions": [_action_view(a) for a in acts]} if m.plan else {},
-        "outcome": m.outcome, "created_at": m.created_at.isoformat(), "updated_at": m.updated_at.isoformat(),
+        "outcome": m.outcome, "paused": m.paused, "escalated": m.escalated, "created_at": m.created_at.isoformat(), "updated_at": m.updated_at.isoformat(),
     }
+
+
+# ---------------------------------------------------------------- mission control
+def pause(db: Session, m: Mission) -> None:
+    if m.status in TERMINAL:
+        raise EngineError(409, "mission_final", "Already finished")
+    m.paused = True
+    emit(db, m, "MISSION_PAUSED", {})
+
+
+def resume(db: Session, m: Mission) -> None:
+    if not m.paused:
+        raise EngineError(409, "not_paused", "Mission is not paused")
+    m.paused = False
+    emit(db, m, "MISSION_RESUMED", {})
+
+
+def reject(db: Session, m: Mission, action_ids: list[str], reason: str = "") -> None:
+    if m.status != "NEEDS_APPROVAL":
+        raise EngineError(409, "not_awaiting_approval", f"Mission is {m.status}")
+    for aid in action_ids:
+        a = db.get(Action, aid)
+        if not a or a.mission_id != m.id or a.tenant_id != m.tenant_id or a.status != "AWAITING_APPROVAL" or a.revision != m.revision:
+            raise EngineError(404, "action_not_found", "No such pending action")
+        a.status = "REJECTED"
+        emit(db, m, "REJECTED_BY_USER", {"reason": reason[:200]}, a.id)
+    if not any(a.status in ("AWAITING_APPROVAL", "AUTHORIZED") for a in _actions(db, m)):
+        _invalidate_open(db, m, "ALL_REJECTED")
+        transition(db, m, "CANCELLED", "all_actions_rejected")
+
+
+def escalate(db: Session, m: Mission, reason: str = "") -> None:
+    if m.status in ("VERIFIED", "CANCELLED", "SUPERSEDED"):
+        raise EngineError(409, "mission_final", "Nothing to escalate")
+    agents.require("observer", "escalate")
+    m.escalated = True
+    emit(db, m, "HUMAN_ESCALATION", {"reason": reason[:200] or "requested by user", "note": "A human must resolve this; no external handoff is performed automatically."})
+
+
+ORDINALS = {"first": 0, "1st": 0, "one": 0, "second": 1, "2nd": 1, "two": 1, "third": 2, "3rd": 2, "three": 2, "last": -1,
+            "पहला": 0, "पहली": 0, "दूसरा": 1, "दूसरी": 1, "तीसरा": 2, "முதல்": 0, "இரண்டாவது": 1, "మొదటి": 0, "రెండవ": 1}
+
+
+def resolve_reference(m: Mission, text: str) -> tuple[str, str] | None:
+    """Resolve 'the second option' / a candidate's label / 'that booking' against the mission's open question or bindings."""
+    low = text.lower()
+    cl = m.clarification or {}
+    cands = cl.get("candidates") or []
+    if cands and cl.get("role"):
+        for w, i in ORDINALS.items():
+            if re.search(rf"(?<!\w){re.escape(w)}(?!\w)", low) and (i == -1 or i < len(cands)):
+                return cl["role"], cands[i]["id"]
+        hits = [c for c in cands if any(tok in low for tok in re.findall(r"[a-z0-9]{4,}", c["label"].lower()))]
+        if len(hits) == 1:
+            return cl["role"], hits[0]["id"]
+    if re.search(r"\b(that|this|the same) (booking|flight|customer|product|contact)\b", low):
+        for role in ("booking_id", "product_id", "customer_id", "lead_id"):
+            if m.bindings.get(role):
+                return role, m.bindings[role]
+    return None
