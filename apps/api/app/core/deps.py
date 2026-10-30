@@ -43,6 +43,8 @@ def current_ctx(request: Request, db: Session = Depends(get_db)) -> Ctx:
     mem = db.query(Membership).filter(Membership.user_id == user.id).first()
     if not mem:
         raise err(403, "no_membership", "No workspace membership")
+    if request.method in MUTATING and mem.role == "viewer" and not request.url.path.endswith("/auth/logout"):
+        raise err(403, "read_only_role", "Your role is read-only in this workspace")
     return Ctx(user=user, tenant_id=mem.tenant_id, workspace_id=mem.workspace_id, role=mem.role,
                session=sess, db=db)
 

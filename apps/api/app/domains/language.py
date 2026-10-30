@@ -49,6 +49,12 @@ DOMAIN_KEYWORDS: dict[str, list[str]] = {
                 "भुगतान", "पैसे", "கட்டணம்", "பணம்", "చెల్లింపు", "డబ్బు"],
     "retail": ["keyboard", "stock", "reserve", "shop", "product", "mouse", "in stock", "कीबोर्ड", "स्टॉक",
                "दुकान", "கீபோர்டு", "கடை", "కీబోర్డ్", "స్టాక్"],
+    "telecom": ["telecom", "mobile bill", "sim ", "broadband", "network outage", "jio", "airtel", "postpaid", "telecom bill"],
+    "housing": ["landlord", "rent ", "rental", "deposit", "tenant", "builder", "maintenance complaint"],
+    "government": ["government", "grievance", "rti ", "ration", "municipal", "passport"],
+    "healthcare": ["hospital", "clinic", "patient", "doctor appointment", "medical bill", "hospital billing"],
+    "insurance": ["insurance", "claim was rejected", "policy claim"],
+    "ecommerce": ["online order", "return was refused", "refund for order", "amazon", "flipkart", "delivery"],
     "crm": ["customer", "lead", "follow up", "follow-up", "caller", "ग्राहक", "வாடிக்கையாளர்", "కస్టమర్"],
 }
 

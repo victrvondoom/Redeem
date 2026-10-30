@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     # Comma separated E.164 numbers owned/authorised by the operator. Nothing else may be dialled.
     outbound_test_numbers: str = Field("", validation_alias="REDEEM_OUTBOUND_TEST_NUMBERS")
 
+    isolated_browser_runtime_url: str = Field("", validation_alias="REDEEM_ISOLATED_BROWSER_URL")
+
     @property
     def bolna_configured(self) -> bool:
         return bool(self.bolna_api_key and self.bolna_agent_id)

@@ -5,7 +5,23 @@ from sqlalchemy.orm import Session
 
 from ..connectors.base import canonical
 from ..models import Call, CallEvent
+from ..domains.language import detect_language, route_domains
+from ..policy import safety
 from .bolna import STATUS_RANK
+
+
+def analyse_transcript(text: str) -> dict:
+    """Heuristic post-call analysis. Confidence is never invented: provider did not supply per-line confidence."""
+    events = []
+    for line in text.splitlines():
+        if ':' in line:
+            who, said = line.split(':', 1)
+            if who.strip().lower() in ('user', 'customer', 'caller', 'assistant', 'agent'):
+                events.append({'speaker': who.strip().lower(), 'text': said.strip(), 'language': detect_language(said).code, 'confidence': None})
+    domains, _ = route_domains(text)
+    return {'heuristic': True, 'language': detect_language(text).code, 'domains': domains, 'events': events,
+            'untrusted_content': safety.evaluate_untrusted_content(text).as_dict(),
+            'credential_request_flag': safety.evaluate_intent(text).decision == 'REFUSE'}
 
 
 def apply_call_update(db: Session, call: Call, data: dict, authoritative: bool) -> str:
@@ -28,6 +44,7 @@ def apply_call_update(db: Session, call: Call, data: dict, authoritative: bool) 
         outcome = "out_of_order_ignored"
     if isinstance(data.get("transcript"), str):
         call.transcript = data["transcript"][:20000]
+        call.analysis = analyse_transcript(call.transcript)
     cost = data.get("total_cost")
     if isinstance(cost, (int, float)) and not isinstance(cost, bool):
         call.cost = float(cost)

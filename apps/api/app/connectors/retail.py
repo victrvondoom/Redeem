@@ -1,7 +1,7 @@
 """Stateful retail + CRM fixture connector (fictional electronics shop)."""
 import secrets
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from ..models import FxCustomer, FxFault, FxProduct, FxReservation
@@ -56,10 +56,11 @@ class RetailConnector:
             self.db.commit()
             return {"ref": prior.ref, "status": prior.status, "deduplicated": True}
         qty = params["qty"]
-        if p.stock < qty:
-            raise ProviderRejected("out_of_stock", f"only {p.stock} left")
-        p.stock -= qty
-        p.version += 1
+        res = self.db.execute(update(FxProduct).where(FxProduct.id == p.id, FxProduct.stock >= qty)
+                              .values(stock=FxProduct.stock - qty, version=FxProduct.version + 1))
+        if res.rowcount != 1:  # atomic check-and-decrement: no oversell under concurrency
+            self.db.rollback()
+            raise ProviderRejected("out_of_stock", "insufficient stock")
         c.stage = "RESERVATION"
         ref = f"RSV-{secrets.token_hex(3).upper()}"
         self.db.add(FxReservation(tenant_id=self.tenant_id, customer_id=c.id, product_id=p.id, qty=qty,
@@ -70,6 +71,7 @@ class RetailConnector:
         return {"ref": ref, "status": "RESERVED"}
 
     def verify(self, kind: str, params: dict, idempotency_key: str, snapshot: dict) -> tuple[str, dict]:
+        self.db.expire_all()
         rows = list(self.db.scalars(select(FxReservation).where(
             FxReservation.tenant_id == self.tenant_id, FxReservation.customer_id == params["customer_id"],
             FxReservation.product_id == params["product_id"])))

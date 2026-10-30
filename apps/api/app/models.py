@@ -2,7 +2,7 @@
 import secrets
 from datetime import datetime
 
-from sqlalchemy import JSON, BigInteger, Boolean, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, BigInteger, Boolean, CheckConstraint, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .db import Base, UTCDateTime, utcnow
@@ -222,6 +222,7 @@ class Call(Base):
     cost: Mapped[float | None] = mapped_column(nullable=True)
     duration_seconds: Mapped[float | None] = mapped_column(nullable=True)
     error_code: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    analysis: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
 
@@ -298,7 +299,7 @@ class FxRequest(Base):
 
 class FxProduct(Base):
     __tablename__ = "fx_products"
-    __table_args__ = (UniqueConstraint("tenant_id", "sku"),)
+    __table_args__ = (UniqueConstraint("tenant_id", "sku"), CheckConstraint("stock >= 0", name="ck_stock_nonneg"))
     id: Mapped[str] = _id("prd")
     tenant_id: Mapped[str] = mapped_column(String(40), index=True)
     sku: Mapped[str] = mapped_column(String(30))
@@ -338,3 +339,58 @@ class FxFault(Base):
     tenant_id: Mapped[str] = mapped_column(String(40), index=True)
     kind: Mapped[str] = mapped_column(String(20))  # ack_loss | silent_drop
     remaining: Mapped[int] = mapped_column(Integer, default=1)
+
+
+class FxCalendarEvent(Base):
+    __tablename__ = "fx_calendar_events"
+    id: Mapped[str] = _id("cal")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    title: Mapped[str] = mapped_column(String(200))
+    linked_booking_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    status: Mapped[str] = mapped_column(String(30), default="ACTIVE")  # ACTIVE | CANCELLED_NEEDS_REBOOK
+    version: Mapped[int] = mapped_column(Integer, default=1)
+
+
+class FxLead(Base):
+    """CRM fixture. Contacts are matched by id; names are never identity."""
+
+    __tablename__ = "fx_leads"
+    id: Mapped[str] = _id("led")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    name: Mapped[str] = mapped_column(String(200))
+    phone_last4: Mapped[str] = mapped_column(String(4))
+    stage: Mapped[str] = mapped_column(String(20), default="NEW")
+    follow_up_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+
+
+class FxCase(Base):
+    """Workspace case desk: complaint/ticket *records prepared inside REDEEM*. Not an external filing."""
+
+    __tablename__ = "fx_cases"
+    __table_args__ = (UniqueConstraint("tenant_id", "idempotency_key"),)
+    id: Mapped[str] = _id("cas")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    domain: Mapped[str] = mapped_column(String(30))
+    title: Mapped[str] = mapped_column(String(200))
+    body: Mapped[str] = mapped_column(Text)
+    sources: Mapped[list] = mapped_column(JSON, default=list)
+    status: Mapped[str] = mapped_column(String(20), default="DRAFT_READY")
+    idempotency_key: Mapped[str] = mapped_column(String(80))
+    ref: Mapped[str] = mapped_column(String(30))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+
+class RegSource(Base):
+    """Retrieved regulatory/official source passages. Citations may only point at rows here."""
+
+    __tablename__ = "reg_sources"
+    id: Mapped[str] = _id("src")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    url: Mapped[str] = mapped_column(String(500))
+    title: Mapped[str] = mapped_column(String(300))
+    authority: Mapped[str] = mapped_column(String(200))
+    published: Mapped[str] = mapped_column(String(20))
+    passage: Mapped[str] = mapped_column(Text)
+    is_fixture: Mapped[bool] = mapped_column(Boolean, default=True)

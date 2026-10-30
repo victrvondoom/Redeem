@@ -14,12 +14,17 @@ from sqlalchemy.orm import Session
 from ..config import settings
 from ..connectors.base import ProviderRejected, ProviderTimeout, canonical, sha256_hex
 from ..connectors.booking import BookingConnector
+from ..connectors.calendar import CalendarConnector
+from ..connectors.casedesk import CaseDeskConnector
+from ..connectors.crm import CrmConnector
 from ..connectors.retail import RetailConnector
 from ..db import utcnow
 from ..domains.language import detect_language, route_domains
 from ..fixtures.seed import POLICY_DOCS
-from ..models import (Action, ActionApproval, ActionEvent, Connection, FxBooking, FxCustomer, FxProduct,
-                      Mission, MissionRevision, ProviderOperation, VerificationClaim)
+from ..models import (Action, ActionApproval, ActionEvent, Connection, FxBooking, FxCustomer, FxLead, FxProduct,
+                      Mission, MissionRevision, ProviderOperation, RegSource, VerificationClaim)
+from ..policy import citations as cite
+from ..policy import safety
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
@@ -63,7 +68,8 @@ def transition(db: Session, m: Mission, new: str, reason: str = "") -> None:
 
 
 def connector_for(name: str, db: Session, tenant_id: str):
-    return {"booking_fixture": BookingConnector, "retail_fixture": RetailConnector}[name](db, tenant_id)
+    return {"booking_fixture": BookingConnector, "retail_fixture": RetailConnector, "calendar_fixture": CalendarConnector,
+            "crm_fixture": CrmConnector, "casedesk_fixture": CaseDeskConnector}[name](db, tenant_id)
 
 
 def connection_active(db: Session, tenant_id: str, provider: str) -> bool:
@@ -85,13 +91,30 @@ def op_key(m: Mission, kind: str, target: str, params: dict) -> str:
 
 # ---------------------------------------------------------------- pipeline
 
+CASE_DOMAINS = ['telecom', 'housing', 'government', 'healthcare', 'insurance', 'ecommerce', 'consumer_rights', 'banking']
 WEEKDAYS = {"monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3, "friday": 4, "saturday": 5, "sunday": 6,
             "सोमवार": 0, "शनिवार": 5, "रविवार": 6, "சனி": 5, "శని": 5, "திங்கள்": 0, "సోమ": 0}
+
+
+NUM_WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "एक": 1, "दो": 2, "तीन": 3}
+
+
+def parse_qty(text: str) -> int | None:
+    low = text.lower()
+    m = re.search(r"\b(\d{1,2})\s*(x|units?|pcs|pieces)?\s*(keyboards?|mouse|mice)\b", low)
+    if m:
+        return max(1, min(int(m.group(1)), 20))
+    for w, n in NUM_WORDS.items():
+        if re.search(rf"\b{w}\s+(keyboards?|mouse|mice)\b", low) or f"{w} कीबोर्ड" in low:
+            return n
+    return None
 
 
 def parse_pickup_date(text: str, now: datetime | None = None) -> str | None:
     low = text.lower()
     today = (now or utcnow()).astimezone(IST).date()
+    if "tomorrow" in low:
+        return (today + timedelta(days=1)).isoformat()
     for word, wd in WEEKDAYS.items():
         if word in low:
             delta = (wd - today.weekday()) % 7 or 7
@@ -123,10 +146,31 @@ def advance(db: Session, m: Mission, confirmed_low_confidence: bool = False,
     m.language_detected = lang.code
     domains, conf = route_domains(m.intent)
     m.domains = domains
+    decision = safety.evaluate_intent(m.intent)
+    emit(db, m, "POLICY", decision.as_dict())
+    if decision.decision == "REFUSE":
+        m.clarification = {"type": "refused", "message": decision.explanation}
+        m.outcome = {"status": "FAILED", "reason": "policy_refused", "risk_class": decision.risk_class,
+                     "headline": "Refused by safety policy", "headline_en": "Refused by safety policy"}
+        m.domains = domains
+        transition(db, m, "CLASSIFIED")
+        transition(db, m, "FAILED", "policy_refused")
+        return
+    if decision.decision == "CLARIFY":
+        m.domains = domains
+        m.clarification = {"type": "scam_warning", "message": decision.explanation}
+        transition(db, m, "CLASSIFIED")
+        return
+    case_domain = next((d for d in domains if d in CASE_DOMAINS), None)
     if "travel" in domains:
         m.scenario = "flight_recovery"
     elif "retail" in domains:
         m.scenario = "retail_reservation"
+    elif "crm" in domains and ("follow" in m.intent.lower() or "lead" in m.intent.lower() or "call back" in m.intent.lower()):
+        m.scenario = "crm_followup"
+    elif case_domain:
+        m.scenario = "case_preparation"
+        m.bindings = {**m.bindings, "case_domain": case_domain}
     else:
         m.scenario = "unsupported"
     emit(db, m, "CLASSIFIED", {"domains": domains, "confidence": conf, "scenario": m.scenario,
@@ -144,7 +188,8 @@ def advance(db: Session, m: Mission, confirmed_low_confidence: bool = False,
 
 
 def _bindings_complete(m: Mission) -> bool:
-    need = {"flight_recovery": ["booking_id"], "retail_reservation": ["product_id", "customer_id", "pickup_date"]}
+    need = {"flight_recovery": ["booking_id"], "retail_reservation": ["product_id", "customer_id", "pickup_date"],
+            "crm_followup": ["lead_id", "follow_up_date"], "case_preparation": ["case_domain"]}
     return all(m.bindings.get(k) for k in need.get(m.scenario, []))
 
 
@@ -178,8 +223,11 @@ def discover(db: Session, m: Mission) -> None:
             d = parse_pickup_date(m.intent)
             if d:
                 m.bindings = {**m.bindings, "pickup_date": d}
+        q = parse_qty(m.intent)
+        if q and not m.bindings.get("qty"):
+            m.bindings = {**m.bindings, "qty": str(q)}
         if not m.bindings.get("product_id"):
-            words = [w for w in re.findall(r"\w+", m.intent.lower()) if len(w) > 3]
+            words = [w.rstrip("s") for w in re.findall(r"\w+", m.intent.lower()) if len(w) > 3]
             prods = list(db.scalars(select(FxProduct).where(FxProduct.tenant_id == t)))
             matches = [p for p in prods if any(w in p.name.lower() for w in words)]
             matches = [p for p in matches if "keyboard" in p.name.lower() or "mouse" in p.name.lower()
@@ -210,6 +258,24 @@ def discover(db: Session, m: Mission) -> None:
         if not m.bindings.get("pickup_date"):
             m.clarification = {"type": "missing_field", "role": "pickup_date",
                                "message": "For which date should I reserve it? (YYYY-MM-DD)"}
+            emit(db, m, "CLARIFICATION", m.clarification)
+            return
+    elif m.scenario == "crm_followup":
+        if not m.bindings.get("follow_up_date"):
+            d = parse_pickup_date(m.intent)
+            if d:
+                m.bindings = {**m.bindings, "follow_up_date": d}
+        if not m.bindings.get("lead_id"):
+            leads = list(db.scalars(select(FxLead).where(FxLead.tenant_id == t)))
+            low = m.intent.lower()
+            leads.sort(key=lambda x: 0 if x.name.split()[0].lower() in low else 1)
+            m.clarification = {"type": "entity_ambiguous", "role": "lead_id",
+                               "message": "Which contact? Contacts are matched by record, never by name alone.",
+                               "candidates": [{"id": x.id, "label": x.name, "hint": f"phone ending {x.phone_last4} · {x.stage}"} for x in leads]}
+            emit(db, m, "CLARIFICATION", m.clarification)
+            return
+        if not m.bindings.get("follow_up_date"):
+            m.clarification = {"type": "missing_field", "role": "follow_up_date", "message": "On which date should the follow-up be? (YYYY-MM-DD)"}
             emit(db, m, "CLARIFICATION", m.clarification)
             return
     if not _bindings_complete(m):
@@ -258,6 +324,13 @@ def build_plan(db: Session, m: Mission) -> None:
             actions.append(_new_action(db, m, 1, "hotel_change_request", "booking_fixture", {
                 "booking_id": hotel.id, "booking_ref": hotel.ref, "change": "free_date_change_request",
                 "reason": "linked_flight_cancelled"}, hotel.id, None, "booking_change"))
+        if re.search(r"calendar|कैलेंडर|காலண்டர்|క్యాలెండర్", m.intent, re.I):
+            ev = CalendarConnector(db, t).for_booking(b.id)
+            if ev:
+                actions.append(_new_action(db, m, len(actions), "calendar_update", "calendar_fixture", {
+                    "event_id": ev.id, "title": ev.title, "change": "mark_cancelled_needs_rebook"}, ev.id, None, "calendar_change"))
+            else:
+                notes.append("No calendar event is linked to this booking, so no calendar change was planned.")
         blocked.append({"kind": "voice_call_airline", "status": "BLOCKED",
                         "reason": "PROVIDER_NOT_CONFIGURED" if not settings.bolna_configured
                         else "NO_AUTHORISED_DESTINATION",
@@ -266,13 +339,39 @@ def build_plan(db: Session, m: Mission) -> None:
         notes += ["Regulatory citations are not included: no verified, dated legal source corpus is ingested yet.",
                   "Effects occur in a local stateful fixture; no real airline or bank is contacted."]
         summary = f"Request refund of ₹{b.amount_paise / 100:,.2f} for {b.ref}" + (
-            f" and a date-change for hotel {hotel.ref}" if hotel else "")
+            f" and a date-change for hotel {hotel.ref}" if hotel else "") + (
+            " and correct the linked calendar event" if any(a.kind == "calendar_update" for a in actions) else "")
+    elif m.scenario == "crm_followup":
+        x = db.get(FxLead, m.bindings["lead_id"])
+        if not x or x.tenant_id != t:
+            transition(db, m, "FAILED", "lead_not_found")
+            return
+        actions.append(_new_action(db, m, 0, "crm_followup", "crm_fixture", {
+            "lead_id": x.id, "lead_name": x.name, "phone_last4": x.phone_last4, "follow_up_date": m.bindings["follow_up_date"],
+            "expected_version": x.version, "note": f"Created from request: {m.intent[:120]}"}, x.id, None, "data_write"))
+        summary = f"Schedule follow-up for {x.name} (phone ending {x.phone_last4}) on {m.bindings['follow_up_date']}"
+        notes.append("Effects occur in a local CRM fixture.")
+    elif m.scenario == "case_preparation":
+        dom = m.bindings["case_domain"]
+        srcs = list(db.scalars(select(RegSource).where(RegSource.tenant_id == t, RegSource.url.contains(dom))))
+        ids = [x.id for x in srcs]
+        body = f"Complaint category: {dom}\n\nStatement (user's words): {m.intent}\n\n" + (
+            "Sources: " + "; ".join(f"[{x.id}] {x.title} ({x.authority}, {x.published})" for x in srcs) if srcs
+            else "Sources: none. No verified regulatory source is available, so no entitlement or deadline is asserted.")
+        cite.assert_valid(db, t, body, ids)
+        citations_view = [{"id": x.id, "title": x.title, "source": x.url, "effective_date": x.published,
+                           "jurisdiction": x.authority, "is_fixture": x.is_fixture} for x in srcs]
+        citations = citations_view
+        actions.append(_new_action(db, m, 0, "prepare_case", "casedesk_fixture", {
+            "domain": dom, "title": f"{dom.title()} complaint: {m.intent[:60]}", "body": body, "source_ids": ids}, "case:" + dom, None, "legal_information"))
+        summary = f"Prepare a {dom} complaint record in your case desk (not filed with any authority)"
+        notes.append("Preparation only: REDEEM has no verified filing channel for this domain.")
     else:
         p, c = db.get(FxProduct, m.bindings["product_id"]), db.get(FxCustomer, m.bindings["customer_id"])
         if not p or p.tenant_id != t or not c or c.tenant_id != t:
             transition(db, m, "FAILED", "target_not_found")
             return
-        qty = 1
+        qty = max(1, min(int(m.bindings.get("qty", 1)), 20))
         if p.stock < qty:
             alts = list(db.scalars(select(FxProduct).where(FxProduct.tenant_id == t, FxProduct.stock > 0,
                                                            FxProduct.name.like("%eyboard%"))))
@@ -287,6 +386,8 @@ def build_plan(db: Session, m: Mission) -> None:
             "unit_price_paise": p.price_paise}, p.id, p.price_paise * qty, "inventory_write"))
         summary = f"Reserve {qty} × {p.name} for {c.name}, pickup {m.bindings['pickup_date']}"
         notes.append("Effects occur in a local stateful shop fixture.")
+    for a in actions:
+        emit(db, m, "POLICY", safety.evaluate_action(a.kind, a.params, a.risk).as_dict(), a.id)
     m.plan = {"summary": summary, "actions": [_action_view(a) for a in actions], "blocked": blocked,
               "notes": notes, "policy_citations": citations}
     emit(db, m, "PLAN_READY", {"revision": m.revision, "action_ids": [a.id for a in actions]})
@@ -331,7 +432,8 @@ def revise(db: Session, m: Mission, *, intent: str | None = None, reason: str = 
     advance(db, m, confirmed_low_confidence=confirmed)
 
 
-ALLOWED_ROLES = {"flight_recovery": {"booking_id"}, "retail_reservation": {"product_id", "customer_id", "pickup_date"}}
+ALLOWED_ROLES = {"flight_recovery": {"booking_id"}, "retail_reservation": {"product_id", "customer_id", "pickup_date"},
+                 "crm_followup": {"lead_id", "follow_up_date"}}
 
 
 def bind(db: Session, m: Mission, role: str, value: str) -> None:
@@ -348,6 +450,9 @@ def bind(db: Session, m: Mission, role: str, value: str) -> None:
         ok = bool(row and row.tenant_id == t)
     elif role == "customer_id":
         row = db.get(FxCustomer, value)
+        ok = bool(row and row.tenant_id == t)
+    elif role == "lead_id":
+        row = db.get(FxLead, value)
         ok = bool(row and row.tenant_id == t)
     else:
         ok = bool(re.fullmatch(r"\d{4}-\d{2}-\d{2}", value))

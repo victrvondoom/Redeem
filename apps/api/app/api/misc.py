@@ -14,6 +14,7 @@ from ..models import (Action, ActionApproval, ActionEvent, AuditEvent, AuthSessi
                       Connection, Document, FxBooking, FxCustomer, FxFault, FxProduct, FxRequest, FxReservation,
                       Membership, Mission, MissionRevision, ProviderOperation, Tenant, User, VerificationClaim,
                       Workspace)
+from ..models import FxCalendarEvent, FxCase, FxLead
 from ..policy.payment_safety import scan
 from ..schemas import ScanIn
 
@@ -204,7 +205,7 @@ def export(ctx: Ctx = Depends(current_ctx)):
 def _purge_tenant(db, t: str) -> None:
     for model in (CallEvent, VerificationClaim, ProviderOperation, ActionApproval, ActionEvent, Action,
                   MissionRevision, Mission, Document, Call, ConsentRecord, FxFault, FxRequest, FxReservation,
-                  FxBooking, FxProduct, FxCustomer, Connection):
+                  FxBooking, FxProduct, FxCustomer, FxCalendarEvent, FxLead, FxCase, RegSource, Connection):
         db.execute(delete(model).where(model.tenant_id == t))
 
 
@@ -244,3 +245,68 @@ def audit_log(ctx: Ctx = Depends(current_ctx)):
     rows = ctx.db.scalars(select(AuditEvent).where(AuditEvent.tenant_id == ctx.tenant_id)
                           .order_by(AuditEvent.created_at.desc()).limit(100))
     return {"items": [{"action": a.action, "target": a.target, "at": a.created_at.isoformat()} for a in rows]}
+
+
+# ---------------------------------------------------------------- workflows, safety, sources, browser gate
+from ..domains.workflows import get_workflow, list_workflows  # noqa: E402
+from ..models import Mission as _Mission, RegSource  # noqa: E402
+from ..orchestration import engine as _engine  # noqa: E402
+from ..policy import safety, ssrf  # noqa: E402
+from ..schemas import StartWorkflowIn, UrlCheckIn  # noqa: E402
+
+
+@router.get("/workflows")
+def workflows(ctx: Ctx = Depends(current_ctx)):
+    return {"items": list_workflows()}
+
+
+@router.post("/workflows/{workflow_id}/start", status_code=201)
+def start_workflow(workflow_id: str, body: StartWorkflowIn, ctx: Ctx = Depends(current_ctx)):
+    w = get_workflow(workflow_id)
+    if not w:
+        raise err(404, "not_found", "Unknown workflow")
+    missing = [k for k in w.inputs if not str(body.inputs.get(k, "")).strip()]
+    if missing:
+        raise err(422, "missing_inputs", f"Missing inputs: {', '.join(missing)}", missing=missing)
+    try:
+        intent = w.intent_template.format(**{k: str(body.inputs[k])[:300] for k in w.inputs})
+    except KeyError as e:  # pragma: no cover
+        raise err(422, "bad_inputs", str(e))
+    m = _Mission(tenant_id=ctx.tenant_id, workspace_id=ctx.workspace_id, user_id=ctx.user.id, intent=intent,
+                 language_selected=ctx.user.language)
+    ctx.db.add(m)
+    ctx.db.flush()
+    audit(ctx.db, ctx, "workflow.start", workflow_id)
+    try:
+        _engine.start_mission(ctx.db, m)
+    finally:
+        ctx.db.commit()
+    return {"workflow": workflow_id, "mission": _engine.mission_view(ctx.db, m)}
+
+
+@router.post("/safety/evaluate-content")
+def evaluate_content(body: ScanIn, ctx: Ctx = Depends(current_ctx)):
+    return safety.evaluate_untrusted_content(body.text).as_dict()
+
+
+@router.post("/safety/check-url")
+def check_url(body: UrlCheckIn, ctx: Ctx = Depends(current_ctx)):
+    try:
+        ssrf.validate_url(body.url)
+        return {"allowed": True}
+    except ssrf.UnsafeURL as e:
+        return {"allowed": False, "reason": str(e)}
+
+
+@router.get("/browser/status")
+def browser_status(ctx: Ctx = Depends(current_ctx)):
+    ok, why = ssrf.browser_execution_allowed()
+    return {"cloud_browser": "AVAILABLE" if ok else "BLOCKED", "reason": why}
+
+
+@router.get("/sources")
+def sources(ctx: Ctx = Depends(current_ctx)):
+    rows = ctx.db.scalars(select(RegSource).where(RegSource.tenant_id == ctx.tenant_id))
+    return {"items": [{"id": r.id, "url": r.url, "title": r.title, "authority": r.authority, "published": r.published,
+                       "passage": r.passage, "is_fixture": r.is_fixture} for r in rows],
+            "note": "Only fixture sources are loaded. No official regulatory corpus has been ingested; none is asserted."}

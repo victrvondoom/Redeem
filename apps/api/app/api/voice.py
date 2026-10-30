@@ -179,3 +179,50 @@ async def bolna_webhook(request: Request, token: str = Query("", max_length=200)
                                     authoritative=False)
     db.commit()
     return {"accepted": True, "result": outcome}
+
+
+# ---------------------------------------------------------------- function-calling tools for the Bolna agent
+from ..models import FxBooking, FxProduct, Membership, User  # noqa: E402
+from ..orchestration import engine  # noqa: E402
+
+
+@router.post("/voice/tools/{tool}")
+async def voice_tool(tool: str, request: Request, token: str = Query("", max_length=200), db=Depends(get_db)):
+    """Webhook tools the Bolna agent may call mid-conversation. Gated by the private secret; tenant is derived from the
+    call row, never from the payload. Tools are read-only except start_mission, which only *plans*: approval and
+    execution still require the signed-in human."""
+    if not settings.bolna_webhook_secret:
+        raise err(503, "webhook_not_configured", "Tool ingress is not configured")
+    if not safe_equal(token, settings.bolna_webhook_secret):
+        raise err(401, "invalid_webhook_token", "Invalid credentials")
+    body = await request.json()
+    ex, args = body.get("execution_id"), body.get("args") or {}
+    call = db.scalar(select(Call).where(Call.provider == "bolna", Call.execution_id == str(ex))) if ex else None
+    if not call:
+        raise err(404, "unknown_call", "No such call")
+    t = call.tenant_id
+    if tool == "search_catalogue":
+        q = str(args.get("query", ""))[:80].lower()
+        rows = [p for p in db.scalars(select(FxProduct).where(FxProduct.tenant_id == t)) if q and q in p.name.lower()]
+        return {"results": [{"id": p.id, "name": p.name, "price_inr": p.price_paise / 100, "in_stock": p.stock} for p in rows]}
+    if tool == "lookup_booking":
+        b = db.scalar(select(FxBooking).where(FxBooking.tenant_id == t, FxBooking.ref == str(args.get("ref", ""))[:12]))
+        return {"found": bool(b), **({"ref": b.ref, "status": b.status, "refund_status": b.refund_status} if b else {})}
+    if tool == "start_mission":
+        intent = str(args.get("intent", ""))[:2000]
+        if len(intent) < 3:
+            raise err(422, "invalid_args", "intent required")
+        user = db.get(User, call.user_id)
+        ws = db.scalar(select(Membership.workspace_id).where(Membership.user_id == call.user_id))
+        m = Mission(tenant_id=t, workspace_id=ws, user_id=call.user_id, intent=intent, source="voice", language_selected=user.language if user else "en")
+        db.add(m)
+        db.flush()
+        try:
+            engine.start_mission(db, m)
+        finally:
+            db.commit()
+        call.mission_id = m.id
+        db.commit()
+        return {"mission_id": m.id, "status": m.status, "needs": (m.clarification or {}).get("message"),
+                "plan_summary": (m.plan or {}).get("summary"), "note": "Awaiting the user's approval in the REDEEM app."}
+    raise err(404, "unknown_tool", "Unknown tool")

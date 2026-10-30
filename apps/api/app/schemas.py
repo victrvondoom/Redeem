@@ -78,3 +78,11 @@ class OutboundIn(_Strict):
 
 class ScanIn(_Strict):
     text: str = Field(min_length=1, max_length=5000)
+
+
+class StartWorkflowIn(_Strict):
+    inputs: dict[str, str] = Field(default_factory=dict, max_length=10)
+
+
+class UrlCheckIn(_Strict):
+    url: str = Field(min_length=1, max_length=2000)
