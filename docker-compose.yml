@@ -6,7 +6,7 @@ services:
     volumes: [pgdata:/var/lib/postgresql/data]
   api:
     build: ./apps/api
-    env_file: [.env]
+    env_file: [{ path: .env, required: false }]
     environment:
       REDEEM_DATABASE_URL: postgresql+psycopg://postgres:redeem@db:5432/redeem
     depends_on: [db]

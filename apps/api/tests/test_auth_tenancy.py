@@ -94,3 +94,12 @@ def test_privacy_export_and_delete_mission(api):
     assert any(x["id"] == m["id"] for x in exp["missions"])
     assert api.delete(f"/api/v1/privacy/missions/{m['id']}").status_code == 204
     assert api.get(f"/api/v1/missions/{m['id']}").status_code == 404
+
+
+def test_registration_is_rate_limited_per_ip():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    c = TestClient(app)
+    codes = [c.post("/api/v1/auth/register", json={"email": f"r{i}@example.com", "password": "correct-horse-battery", "name": "R"}).status_code
+             for i in range(12)]
+    assert codes[:10] == [201] * 10 and 429 in codes[10:]

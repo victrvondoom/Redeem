@@ -32,7 +32,7 @@ def _me(ctx_user: User, tenant_id: str, workspace_id: str, role: str, csrf: str)
 
 @router.post("/register", status_code=201)
 def register(body: RegisterIn, request: Request, response: Response, db: Session = Depends(get_db)):
-    limiter.check(f"reg:{request.client.host if request.client else '-'}", 10)
+    limiter.check(f"reg:{request.client.host if request.client else '-'}", settings.register_rate_limit_per_minute)
     if db.scalar(select(User.id).where(User.email == body.email)):
         raise err(409, "email_taken", "An account with this email already exists")
     user = User(email=body.email, name=body.name.strip(), password_hash=hash_password(body.password),

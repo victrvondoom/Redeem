@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     # Comma separated E.164 numbers owned/authorised by the operator. Nothing else may be dialled.
     outbound_test_numbers: str = Field("", validation_alias="REDEEM_OUTBOUND_TEST_NUMBERS")
 
+    register_rate_limit_per_minute: int = Field(10, validation_alias="REDEEM_REGISTER_RATE_LIMIT")
+    # Evaluation-only: lets the benchmark disable one control at a time. Never enable in production.
+    eval_mode: bool = Field(False, validation_alias="REDEEM_EVAL_MODE")
     isolated_browser_runtime_url: str = Field("", validation_alias="REDEEM_ISOLATED_BROWSER_URL")
 
     @property

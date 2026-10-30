@@ -14,6 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "apps" / "api"))
+os.environ["REDEEM_EVAL_MODE"] = "1"
 os.environ["REDEEM_DATABASE_URL"] = f"sqlite:///{tempfile.mkdtemp(prefix='redeem-bench-')}/b.db"
 
 from sqlalchemy import select  # noqa: E402
@@ -27,7 +28,8 @@ from app.models import (Action, ActionApproval, FxBooking, FxFault, FxRequest, M
 from app.orchestration import engine as eng  # noqa: E402
 
 SCENARIOS = ["user_correction", "lost_ack", "silent_drop", "stale_target", "restart_mid_dispatch"]
-POLICIES = ["A_naive", "B_checked", "C_redeem"]
+POLICIES = ["A_naive", "B_checked", "C_redeem", "C_minus_digest", "C_minus_verifier", "C_minus_reconcile"]
+ABLATE = {"C_minus_digest": "no_digest", "C_minus_verifier": "no_verifier", "C_minus_reconcile": "no_reconcile"}
 
 
 def new_tenant(db):
@@ -93,6 +95,9 @@ def run_trial(policy, scenario, rng, trial):
                 submit_retrying(first)  # user_correction: correction never reaches an already-queued instruction
             reported_success = True
         else:
+            eng.ABLATIONS.clear()
+            if policy in ABLATE:
+                eng.ABLATIONS.add(ABLATE[policy])
             m = c_start(db, t, u, w, first)
             if scenario == "user_correction":
                 approve_all(db, m, u.id)
@@ -105,6 +110,9 @@ def run_trial(policy, scenario, rng, trial):
                     approve_all(db, m, u.id)
                 except eng.EngineError:
                     db.rollback(); db.commit()
+                db.refresh(m)
+                if m.status == "AUTHORIZED":  # only reachable if the approval guard is ablated
+                    eng.execute(db, m)
             elif scenario == "restart_mid_dispatch":
                 approve_all(db, m, u.id)
                 act = db.scalar(select(Action).where(Action.mission_id == m.id, Action.kind == "refund_request"))
@@ -130,6 +138,7 @@ def run_trial(policy, scenario, rng, trial):
                 "requests_on_wrong": n_wrong, "reported_success": reported_success,
                 "correct_outcome": completed, "wrong_target": n_wrong > 0, "duplicate": n_ok > 1,
                 "false_success": reported_success and not completed,
+                "verified_outcome": reported_success and completed,
                 "unauthorized_execution": expects_no_effect and (n_ok + n_wrong) > 0, "seconds": round(elapsed, 4)}
 
 
@@ -140,11 +149,11 @@ def summarise(trials):
             rows = [t for t in trials if t["policy"] == p and t["scenario"] == s]
             n = len(rows)
             out.setdefault(p, {})[s] = {"n": n, **{k: sum(r[k] for r in rows) for k in
-                                                   ("correct_outcome", "wrong_target", "duplicate", "false_success", "unauthorized_execution")},
+                                                   ("correct_outcome", "verified_outcome", "wrong_target", "duplicate", "false_success", "unauthorized_execution")},
                                         "mean_seconds": round(sum(r["seconds"] for r in rows) / n, 4)}
         rows = [t for t in trials if t["policy"] == p]
         out[p]["TOTAL"] = {"n": len(rows), **{k: sum(r[k] for r in rows) for k in
-                                              ("correct_outcome", "wrong_target", "duplicate", "false_success", "unauthorized_execution")}}
+                                              ("correct_outcome", "verified_outcome", "wrong_target", "duplicate", "false_success", "unauthorized_execution")}}
     return out
 
 
@@ -153,6 +162,7 @@ def main(n=30, seed=7, write=True):
     rng = random.Random(seed)
     trials = [run_trial(p, s, rng, i) for s in SCENARIOS for p in POLICIES for i in range(n)]
     result = {"generated_at": datetime.now(UTC).isoformat(), "seed": seed, "trials_per_cell": n, "scope": "local stateful fixture; no live provider",
+              "ablations": "C_minus_* disable one control (approval digest / independent verifier / reconciliation) via an eval-only switch. Not run: entity-binding, temporal-guard and causal-ledger ablations.",
               "caveat": "Policies A/B are our own reference executors modelling stated capabilities; results do not generalise to other products or to live providers.",
               "summary": summarise(trials), "raw_trials": trials}
     if write:
@@ -166,4 +176,4 @@ if __name__ == "__main__":
     r = main(**vars(ap.parse_args()))
     for p, rows in r["summary"].items():
         t = rows["TOTAL"]
-        print(f"{p:10s} n={t['n']} correct={t['correct_outcome']} wrong_target={t['wrong_target']} dup={t['duplicate']} false_success={t['false_success']} unauthorized={t['unauthorized_execution']}")
+        print(f"{p:18s} n={t['n']} correct={t['correct_outcome']} verified={t['verified_outcome']} wrong_target={t['wrong_target']} dup={t['duplicate']} false_success={t['false_success']} unauthorized={t['unauthorized_execution']}")

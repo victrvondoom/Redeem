@@ -29,6 +29,19 @@ const en: Dict = {
   "status.AUTHORIZED": "Approved — ready to run", "status.UNCERTAIN": "Uncertain — checking", "status.FAILED": "Failed",
   "status.CANCELLED": "Cancelled", "status.PARTIALLY_VERIFIED": "Partly verified", "status.EXECUTING": "Running",
   "status.INTENT_CAPTURED": "Captured", "status.CLASSIFIED": "Understood",
+  "m.need": "I need one detail from you",
+  "m.plan": "Proposed plan",
+  "m.approve": "Approve",
+  "m.run": "Run approved actions",
+  "m.cancel": "Cancel mission",
+  "m.change": "Wait — change something?",
+  "m.replace": "Replace request",
+  "m.receipt": "Receipt",
+  "m.ledger": "Live ledger",
+  "m.recheck": "Check provider again",
+  "m.download": "Download JSON",
+  "m.noaction": "Nothing to do",
+  "side.workflows": "Workflows",
 };
 
 const hi: Dict = {
@@ -55,6 +68,19 @@ const hi: Dict = {
   "side.vault": "प्रमाण तिजोरी", "side.history": "इतिहास", "side.quality": "क्वालिटी लैब", "side.settings": "सेटिंग्स", "side.signout": "साइन आउट",
   "status.VERIFIED": "सत्यापित", "status.NEEDS_APPROVAL": "आपकी मंज़ूरी चाहिए", "status.DISCOVERING": "आपसे एक जानकारी चाहिए",
   "status.AUTHORIZED": "मंज़ूर — चलाने को तैयार", "status.FAILED": "विफल", "status.CANCELLED": "रद्द",
+  "m.need": "मुझे आपसे एक जानकारी चाहिए",
+  "m.plan": "प्रस्तावित योजना",
+  "m.approve": "मंज़ूर करें",
+  "m.run": "मंज़ूर कदम चलाएँ",
+  "m.cancel": "मिशन रद्द करें",
+  "m.change": "रुकिए — कुछ बदलना है?",
+  "m.replace": "अनुरोध बदलें",
+  "m.receipt": "रसीद",
+  "m.ledger": "लाइव लेज़र",
+  "m.recheck": "प्रदाता से फिर जाँचें",
+  "m.download": "JSON डाउनलोड करें",
+  "m.noaction": "कुछ करने की ज़रूरत नहीं",
+  "side.workflows": "वर्कफ़्लो"
 };
 
 const hinglish: Dict = {
@@ -69,6 +95,19 @@ const hinglish: Dict = {
   "p.1": "Meri flight cancel ho gayi. Refund wapas dilane mein madad karo.", "p.2": "Ek customer Saturday ke liye keyboard reserve karwana chahta hai.",
   "p.3": "Kisi ne account block se bachne ke liye OTP maanga hai.",
   "console.hello": "Namaste", "console.new": "Naya mission", "status.VERIFIED": "Verify ho gaya", "status.NEEDS_APPROVAL": "Aapki approval chahiye",
+  "m.need": "Mujhe aapse ek detail chahiye",
+  "m.plan": "Proposed plan",
+  "m.approve": "Approve karein",
+  "m.run": "Approved actions chalayein",
+  "m.cancel": "Mission cancel karein",
+  "m.change": "Ruko — kuch badalna hai?",
+  "m.replace": "Request badlein",
+  "m.receipt": "Receipt",
+  "m.ledger": "Live ledger",
+  "m.recheck": "Provider ko dobara check karein",
+  "m.download": "JSON download karein",
+  "m.noaction": "Kuch karne ki zaroorat nahi",
+  "side.workflows": "Workflows"
 };
 
 const ta: Dict = {
@@ -84,6 +123,19 @@ const ta: Dict = {
   "p.1": "என் விமானம் ரத்தானது. ரீஃபண்ட் பெற உதவுங்கள்.", "p.2": "ஒரு வாடிக்கையாளர் சனிக்கிழமைக்கு கீபோர்டு முன்பதிவு செய்ய விரும்புகிறார்.",
   "p.3": "கணக்கு முடக்கத்தைத் தவிர்க்க OTP கேட்கிறார்கள்.",
   "console.hello": "வணக்கம்", "console.new": "புதிய பணி", "status.VERIFIED": "சரிபார்க்கப்பட்டது", "status.NEEDS_APPROVAL": "உங்கள் ஒப்புதல் தேவை",
+  "m.need": "உங்களிடமிருந்து ஒரு விவரம் தேவை",
+  "m.plan": "முன்மொழியப்பட்ட திட்டம்",
+  "m.approve": "ஒப்புதல் அளி",
+  "m.run": "ஒப்புதல் பெற்றதை இயக்கு",
+  "m.cancel": "பணியை ரத்து செய்",
+  "m.change": "ஒரு நிமிடம் — மாற்ற வேண்டுமா?",
+  "m.replace": "கோரிக்கையை மாற்று",
+  "m.receipt": "ரசீது",
+  "m.ledger": "நேரடி பதிவேடு",
+  "m.recheck": "வழங்குநரை மீண்டும் சரிபார்",
+  "m.download": "JSON பதிவிறக்கு",
+  "m.noaction": "செய்ய ஏதுமில்லை",
+  "side.workflows": "பணிப்போக்குகள்"
 };
 
 const te: Dict = {
@@ -99,6 +151,19 @@ const te: Dict = {
   "p.1": "నా విమానం రద్దయింది. రీఫండ్ పొందడానికి సహాయం చేయండి.", "p.2": "ఒక కస్టమర్ శనివారానికి కీబోర్డ్ రిజర్వ్ చేయాలని కోరుతున్నారు.",
   "p.3": "ఖాతా బ్లాక్ కాకుండా ఉండటానికి OTP అడిగారు.",
   "console.hello": "నమస్కారం", "console.new": "కొత్త మిషన్", "status.VERIFIED": "ధృవీకరించబడింది", "status.NEEDS_APPROVAL": "మీ ఆమోదం కావాలి",
+  "m.need": "మీ నుండి ఒక వివరం కావాలి",
+  "m.plan": "ప్రతిపాదిత ప్రణాళిక",
+  "m.approve": "ఆమోదించండి",
+  "m.run": "ఆమోదించినవి అమలు చేయండి",
+  "m.cancel": "మిషన్ రద్దు చేయండి",
+  "m.change": "ఆగండి — ఏదైనా మార్చాలా?",
+  "m.replace": "అభ్యర్థనను మార్చండి",
+  "m.receipt": "రసీదు",
+  "m.ledger": "లైవ్ లెడ్జర్",
+  "m.recheck": "ప్రొవైడర్‌ను మళ్లీ తనిఖీ చేయండి",
+  "m.download": "JSON డౌన్‌లోడ్",
+  "m.noaction": "చేయాల్సింది ఏమీ లేదు",
+  "side.workflows": "వర్క్‌ఫ్లోలు"
 };
 
 export const MESSAGES: Record<Lang, Dict> = { en, hi, hinglish, ta, te };

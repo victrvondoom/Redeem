@@ -1,0 +1,26 @@
+{
+ "environment": "rate limiter disabled for the run; single process, SQLite, TestClient (no network); fixture providers",
+ "mission_create_plan": {
+  "n": 60,
+  "p50_ms": 26.81,
+  "p95_ms": 33.77
+ },
+ "mission_get": {
+  "n": 100,
+  "p50_ms": 10.53,
+  "p95_ms": 14.81
+ },
+ "full_mission_approve_execute_verify": {
+  "n": 20,
+  "p50_ms": 86.79,
+  "p95_ms": 129.5
+ },
+ "ledger_events_total": 1240,
+ "concurrent_reads_8_threads": {
+  "requests": 200,
+  "ok": 200,
+  "requests_per_second": 59.4
+ },
+ "rss_mb_start": 138.5,
+ "rss_mb_end": 138.5
+}

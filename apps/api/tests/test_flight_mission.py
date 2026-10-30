@@ -245,3 +245,15 @@ def test_sse_stream_delivers_ledger(api):
     with api.c.stream("GET", f"/api/v1/missions/{m['id']}/stream") as r:
         body = "".join(r.iter_text())
     assert "event: ledger" in body and "event: end" in body and "CLASSIFIED" in body
+
+
+def test_second_mission_does_not_plan_a_duplicate_refund(api, db):
+    first = start(api, "Flight FA2087 cancelled refund")
+    approve_all(api, first)
+    assert api.post(f"/api/v1/missions/{first['id']}/execute").json()["status"] == "VERIFIED"
+    second = start(api, "Flight FA2087 cancelled, still no refund, please chase")
+    assert second["plan"]["actions"] == [] and second["status"] == "CANCELLED"
+    assert second["outcome"]["status"] == "NO_ACTION_NEEDED"
+    assert any("already exists" in n for n in second["plan"]["notes"])
+    db.expire_all()
+    assert len(requests_for(db, api.me["tenant_id"], "FA2087")) == 1

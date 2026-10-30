@@ -18,5 +18,6 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: python -m venv .venv && .venv/bin/pip install -r apps/api/requirements.txt
-      - run: cd apps/web && npm ci && npx tsc --noEmit && npx next build
+      - run: cd apps/web && npm ci && npx tsc --noEmit && npx eslint . && npx next build
+      - run: python evals/runners/benchmark.py --n 5 --seed 7
       - run: cd apps/web && npx playwright install --with-deps chromium && npx playwright test

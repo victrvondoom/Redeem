@@ -1,5 +1,7 @@
 import hashlib
+import json
 import re
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import Response
@@ -162,7 +164,14 @@ def quality(ctx: Ctx = Depends(current_ctx)):
     calls = list(db.scalars(select(Call).where(Call.tenant_id == t)))
     costs = [c.cost for c in calls if c.cost is not None]
     NM = "Not measured"
+    bench_path = Path(__file__).resolve().parents[4] / "evals" / "reports" / "benchmark_results.json"
+    bench = None
+    if bench_path.exists():
+        b = json.loads(bench_path.read_text())
+        bench = {"generated_at": b["generated_at"], "seed": b["seed"], "trials_per_cell": b["trials_per_cell"],
+                 "scope": b["scope"], "caveat": b["caveat"], "ablations": b.get("ablations"), "summary": b["summary"]}
     return {
+        "benchmark": bench,
         "fixture_results": {
             "label": "Local stateful fixtures — not live-provider results",
             "missions_total": len(missions), "missions_by_status": by_status,

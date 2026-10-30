@@ -3,8 +3,12 @@
 - [x] Alembic initial migration (SQLite)
 - [ ] Postgres test run
 - [x] evals/ 3-policy benchmark with raw JSON
-- [ ] evals/ ablations + injection/cross-tenant scoring
-- [ ] Calendar connector for cross-domain flight/hotel/calendar mission
+- [x] evals/ ablations (digest, verifier, reconcile)
+- [ ] injection/cross-tenant scoring in benchmark
+- [x] Calendar connector for cross-domain mission
+- [ ] Task-graph compiler with dependency scheduling
+- [ ] Remaining ablations: entity binding, temporal guard, ledger
+- [ ] Billing + developer domains; email draft connector; PDF extraction; human-handoff state
 - [ ] Docker Compose + deployment config
 - [ ] Native review of hi/ta/te copy; localise detail screens
 - [ ] Durable worker for long-running execution

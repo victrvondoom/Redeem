@@ -11,13 +11,15 @@ export default function Domains() {
   const [error, setError] = useState<string | null>(null);
   const [text, setText] = useState("");
   const [scan, setScan] = useState<Scan | null>(null);
-  useEffect(() => { api<{ items: D[] }>("/domains").then((r) => setItems(r.items)).catch((e) => setError(e.message)); }, []);
+  const [browser, setBrowser] = useState<{ cloud_browser: string; reason: string } | null>(null);
+  useEffect(() => { api<{ cloud_browser: string; reason: string }>("/browser/status").then(setBrowser).catch(() => undefined); api<{ items: D[] }>("/domains").then((r) => setItems(r.items)).catch((e) => setError(e.message)); }, []);
   const run = async () => { try { setScan(await api<Scan>("/safety/scan", { body: { text } })); setError(null); } catch (e) { setError(e instanceof ApiError ? e.message : "Scan failed"); } };
   const tone = (s: string) => (s === "LOCALLY_TESTED" ? "teal" : s === "SPECIFIED" ? "indigo" : "soft");
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <PageTitle title="Domain Explorer" sub="What each domain can do today, and whether it is real, fixture-backed, or not built." />
       <ErrorNote error={error} />
+      {browser && <p className="rounded-xl bg-soft p-4 text-sm"><Tag tone={browser.cloud_browser === "AVAILABLE" ? "teal" : "amber"}>Cloud browser: {browser.cloud_browser}</Tag> <span className="ml-2 text-muted">{browser.reason}</span></p>}
       <ul className="grid gap-4 md:grid-cols-2">{items.map((d) => (
         <li key={d.id} className="card"><div className="flex items-start justify-between gap-2"><h2 className="font-bold">{d.name}</h2><Tag tone={tone(d.status) as "teal"}>{d.status.replaceAll("_", " ")}</Tag></div>
           <p className="mt-1 text-sm text-muted">{d.description}</p>

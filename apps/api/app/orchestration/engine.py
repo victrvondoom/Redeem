@@ -44,6 +44,13 @@ TRANSITIONS: dict[str, set[str]] = {
 }
 
 
+ABLATIONS: set[str] = set()  # benchmark-only; honoured solely when REDEEM_EVAL_MODE=1
+
+
+def _ablated(name: str) -> bool:
+    return settings.eval_mode and name in ABLATIONS
+
+
 class EngineError(Exception):
     def __init__(self, status: int, code: str, message: str, **extra):
         super().__init__(message)
@@ -314,14 +321,17 @@ def build_plan(db: Session, m: Mission) -> None:
             transition(db, m, "FAILED", "booking_not_found")
             return
         citations = [{k: v for k, v in d.items()} for d in POLICY_DOCS]
-        actions.append(_new_action(db, m, 0, "refund_request", "booking_fixture", {
-            "booking_id": b.id, "booking_ref": b.ref, "passenger_name": b.passenger_name,
-            "amount_paise": b.amount_paise, "reason": "involuntary_cancellation"}, b.id, b.amount_paise,
-            "financial_request"))
+        if b.refund_status == "NOT_REQUESTED":
+            actions.append(_new_action(db, m, 0, "refund_request", "booking_fixture", {
+                "booking_id": b.id, "booking_ref": b.ref, "passenger_name": b.passenger_name,
+                "amount_paise": b.amount_paise, "reason": "involuntary_cancellation"}, b.id, b.amount_paise,
+                "financial_request"))
+        else:
+            notes.append(f"A refund request for {b.ref} already exists (status {b.refund_status}); no second request was planned.")
         hotel = db.scalar(select(FxBooking).where(FxBooking.tenant_id == t, FxBooking.kind == "hotel",
                                                   FxBooking.linked_booking_id == b.id))
         if hotel:
-            actions.append(_new_action(db, m, 1, "hotel_change_request", "booking_fixture", {
+            actions.append(_new_action(db, m, len(actions), "hotel_change_request", "booking_fixture", {
                 "booking_id": hotel.id, "booking_ref": hotel.ref, "change": "free_date_change_request",
                 "reason": "linked_flight_cancelled"}, hotel.id, None, "booking_change"))
         if re.search(r"calendar|कैलेंडर|காலண்டர்|క్యాలెండర్", m.intent, re.I):
@@ -392,6 +402,11 @@ def build_plan(db: Session, m: Mission) -> None:
               "notes": notes, "policy_citations": citations}
     emit(db, m, "PLAN_READY", {"revision": m.revision, "action_ids": [a.id for a in actions]})
     transition(db, m, "PLAN_READY")
+    if not actions:
+        m.outcome = {"status": "NO_ACTION_NEEDED", "headline": "Nothing to do", "headline_en": "Nothing to do",
+                     "summary": "; ".join(notes) or "No action is required.", "outstanding": []}
+        transition(db, m, "CANCELLED", "nothing_to_do")
+        return
     transition(db, m, "NEEDS_APPROVAL")
 
 
@@ -485,7 +500,7 @@ def approve(db: Session, m: Mission, user_id: str, approvals: list[dict]) -> Non
             raise EngineError(409, "approval_stale", "That action belongs to an older revision or is not pending",
                               code_detail="REVISION_MISMATCH")
         fresh = compute_digest(m, a, connector_for(a.connector, db, m.tenant_id).version_hash(a.params))
-        if fresh != a.digest:
+        if fresh != a.digest and not _ablated("no_digest"):
             # The target changed after the plan was shown: re-plan under a new revision.
             revise(db, m, reason="target_changed")
             raise EngineError(409, "approval_stale", "The target changed after the plan was shown. A fresh plan "
@@ -550,7 +565,7 @@ def execute(db: Session, m: Mission, before_dispatch: Callable[[Action], None] |
             fresh = compute_digest(m, a, conn.version_hash(a.params))
         except ProviderRejected:
             fresh = ""
-        if fresh != ap.digest:
+        if fresh != ap.digest and not _ablated("no_digest"):
             ap.valid, ap.invalidated_reason = False, "DIGEST_MISMATCH_AT_DISPATCH"
             a.status = "AWAITING_APPROVAL"
             emit(db, m, "APPROVAL_STALE_AT_DISPATCH", {"reason": "target_or_params_changed"}, a.id)
@@ -570,7 +585,8 @@ def execute(db: Session, m: Mission, before_dispatch: Callable[[Action], None] |
             op.status, a.status = "UNCERTAIN", "UNCERTAIN"
             emit(db, m, "ACK_LOST", {"note": "No confirmation received. Will NOT resend; reconciling by lookup."}, a.id)
             db.commit()
-            reconcile_action(db, m, a, snapshot)
+            if not _ablated("no_reconcile"):
+                reconcile_action(db, m, a, snapshot)
             continue
         except ProviderRejected as e:
             op.status, op.finished_at, a.status = "REJECTED", utcnow(), "FAILED"
@@ -610,6 +626,8 @@ def reconcile_action(db: Session, m: Mission, a: Action, snapshot: dict, attempt
 def verify_action(db: Session, m: Mission, a: Action, snapshot: dict) -> None:
     conn = connector_for(a.connector, db, m.tenant_id)
     result, evidence = conn.verify(a.kind, a.params, a.idempotency_key, snapshot)
+    if _ablated("no_verifier"):  # ablation: trust the provider's acknowledgement instead of the read-back
+        result, evidence = "VERIFIED", {"ablated": "no_verifier"}
     db.add(VerificationClaim(tenant_id=m.tenant_id, mission_id=m.id, action_id=a.id,
                              claim=f"{a.kind} applied at provider as approved", result=result, evidence=evidence))
     a.status = "VERIFIED" if result == "VERIFIED" else "FAILED"

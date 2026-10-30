@@ -6,7 +6,7 @@ import { LangSwitcher, Logo } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 
-const NAV = [["/app", "side.console"], ["/app/voice", "side.voice"], ["/app/domains", "side.domains"], ["/app/connections", "side.connections"],
+const NAV = [["/app", "side.console"], ["/app/workflows", "side.workflows"], ["/app/voice", "side.voice"], ["/app/domains", "side.domains"], ["/app/connections", "side.connections"],
   ["/app/vault", "side.vault"], ["/app/history", "side.history"], ["/app/quality", "side.quality"], ["/app/settings", "side.settings"]] as const;
 
 export default function Shell({ children }: { children: ReactNode }) {
