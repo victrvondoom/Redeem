@@ -12,7 +12,7 @@ def test_benchmark_regression_guard():
     spec.loader.exec_module(bench)
     r = bench.main(n=3, seed=1, write=False)
     c, a = r["summary"]["C_redeem"]["TOTAL"], r["summary"]["A_naive"]["TOTAL"]
-    assert c["n"] == 15 and c["correct_outcome"] == 15
+    assert c["n"] == 21 and c["correct_outcome"] == 21
     assert c["wrong_target"] == c["duplicate"] == c["false_success"] == c["unauthorized_execution"] == 0
     assert a["wrong_target"] > 0 and a["duplicate"] > 0 and a["false_success"] > 0
 

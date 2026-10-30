@@ -18,6 +18,7 @@ export default function Console() {
   const router = useRouter();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [funnel, setFunnel] = useState<Record<string, string | number | null> | null>(null);
   const started = useRef(false);
 
   useEffect(() => {
@@ -28,6 +29,7 @@ export default function Console() {
       api<Mission>("/missions", { body: pending }).then((m) => router.replace(`/app/missions/${m.id}`))
         .catch((e) => setError(e instanceof ApiError ? e.message : "Could not start the saved request."));
     }
+    api<Record<string, string | number | null>>("/analytics/funnel").then(setFunnel).catch(() => undefined);
     api<{ items: Row[] }>("/missions?limit=20").then((r) => setRows(r.items)).catch((e) => setError(String(e.message ?? e)));
   }, [router]);
 
@@ -44,6 +46,11 @@ export default function Console() {
       <PageTitle title={`${t("console.hello")}, ${me?.name.split(" ")[0] ?? ""}`} sub="Describe a problem. REDEEM plans it, asks before acting, then verifies the result." />
       <Composer compact />
       <ErrorNote error={error} />
+      {funnel && !funnel.first_verified_outcome_at && (
+        <section className="card" aria-labelledby="start-h"><h2 id="start-h" className="text-lg font-bold">Your first verified outcome</h2>
+          <ol className="mt-3 space-y-2 text-sm">{[["Describe a problem", funnel.first_mission_at], ["Review the plan and approve", funnel.first_approval_at], ["See the verified receipt", funnel.first_verified_outcome_at]].map(([label, done]) => (
+            <li key={String(label)} className="flex items-center gap-3"><span aria-hidden className={`grid h-6 w-6 place-items-center rounded-full text-xs font-bold ${done ? "bg-teal-soft text-teal" : "bg-soft text-muted"}`}>{done ? "✓" : "·"}</span>{String(label)}</li>))}</ol>
+          <p className="mt-3 text-sm text-muted">No sample data yet? Try <Link className="font-semibold text-indigo" href="/app/demo">a demo scenario</Link> — it uses fixtures and says so.</p></section>)}
       <section aria-labelledby="active-h"><h2 id="active-h" className="mb-3 text-lg font-bold">{t("console.active")}</h2>
         {rows === null ? <p className="text-muted" role="status">Loading…</p> : open.length ? list(open) : <Empty title={t("console.empty")} />}</section>
       {recent.length > 0 && <section><h2 className="mb-3 text-lg font-bold">{t("console.recent")}</h2>{list(recent.slice(0, 6))}</section>}

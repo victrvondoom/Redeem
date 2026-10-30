@@ -205,7 +205,8 @@ async def voice_tool(tool: str, request: Request, token: str = Query("", max_len
     if not safe_equal(token, settings.bolna_webhook_secret):
         raise err(401, "invalid_webhook_token", "Invalid credentials")
     body = await request.json()
-    ex, args = body.get("execution_id"), body.get("args") or {}
+    ex = body.get("execution_id")
+    args = body.get("args") or {k: v for k, v in body.items() if k != "execution_id"}  # Bolna sends flat parameters
     call = db.scalar(select(Call).where(Call.provider == "bolna", Call.execution_id == str(ex))) if ex else None
     if not call:
         raise err(404, "unknown_call", "No such call")

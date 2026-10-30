@@ -408,3 +408,16 @@ def test_unauthorized_agent_cannot_cause_consequential_effect(api, db):
     assert db.query(FxRequest).count() == 0
     with pytest.raises(agents.AgentPermissionError):
         agents.require("planner", "dispatch")
+
+
+def test_exported_agent_tools_match_the_endpoints_and_accept_bolna_flat_bodies(api):
+    from app.voice import agent_config
+    cfg = agent_config.build("https://h.example", "S")
+    names = {t["name"] for t in cfg["tools"]}
+    assert names == {"start_mission", "mission_reply", "read_back_plan", "interrupt", "search_catalogue", "lookup_booking"}
+    assert "approve" not in names and "approve" not in " ".join(names)      # no approval tool exists to give the agent
+    assert all(t["url"].startswith("https://h.example/api/v1/voice/tools/") and "execution_id" in t["parameters"]["required"] for t in cfg["tools"])
+    assert cfg["status"] == "UNVERIFIED_AGAINST_LIVE_BOLNA"
+    voice_call(api)
+    flat = api.c.post("/api/v1/voice/tools/search_catalogue?token=whsec-test", json={"execution_id": "exec-9", "query": "mouse"}).json()
+    assert flat["results"] and flat["results"][0]["name"].startswith("Orbit")

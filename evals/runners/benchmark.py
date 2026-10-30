@@ -23,11 +23,11 @@ from app.connectors.base import ProviderTimeout  # noqa: E402
 from app.connectors.booking import BookingConnector  # noqa: E402
 from app.db import Base, SessionLocal, engine as db_engine  # noqa: E402
 from app.fixtures.seed import seed_tenant  # noqa: E402
-from app.models import (Action, ActionApproval, FxBooking, FxFault, FxRequest, Membership, Mission,  # noqa: E402
+from app.models import (Action, ActionApproval, Connection, FxBooking, FxFault, FxMessage, FxRequest, Membership, Mission,  # noqa: E402
                         ProviderOperation, Tenant, User, Workspace)
 from app.orchestration import engine as eng  # noqa: E402
 
-SCENARIOS = ["user_correction", "lost_ack", "silent_drop", "stale_target", "restart_mid_dispatch"]
+SCENARIOS = ["user_correction", "lost_ack", "silent_drop", "stale_target", "restart_mid_dispatch", "revoked_connector", "dependency_failure"]
 POLICIES = ["A_naive", "B_checked", "C_redeem", "C_minus_digest", "C_minus_verifier", "C_minus_reconcile"]
 ABLATE = {"C_minus_digest": "no_digest", "C_minus_verifier": "no_verifier", "C_minus_reconcile": "no_reconcile"}
 
@@ -82,8 +82,11 @@ def run_trial(policy, scenario, rng, trial):
 
         if scenario in ("lost_ack", "silent_drop"):
             db.add(FxFault(tenant_id=t.id, kind="ack_loss" if scenario == "lost_ack" else "silent_drop", remaining=1)); db.commit()
-        if scenario == "stale_target":
-            pass
+        if scenario == "revoked_connector":  # the user revoked the booking connector before execution
+            db.query(Connection).filter(Connection.tenant_id == t.id, Connection.provider == "booking_fixture").update({"status": "revoked"}); db.commit()
+        if scenario == "dependency_failure":  # refund silently dropped; a family message depends on the refund having happened
+            db.add(FxFault(tenant_id=t.id, kind="silent_drop", remaining=1)); db.commit()
+        expects_no_effect = expects_no_effect or scenario == "revoked_connector"
 
         if policy in ("A_naive", "B_checked"):
             if scenario == "stale_target":
@@ -91,6 +94,12 @@ def run_trial(policy, scenario, rng, trial):
             if scenario == "restart_mid_dispatch":
                 conn.submit("refund_request", params(first), key)  # applied, then the process "died"
                 submit_retrying(first)                              # restart: no memory, resend
+            elif scenario == "dependency_failure":
+                submit_retrying(first)                              # provider drops it silently
+                from app.connectors.comms import CommsConnector
+                from app.models import FxContact
+                c = db.scalar(select(FxContact).where(FxContact.tenant_id == t.id))
+                CommsConnector(db, t.id).submit("notify_contact", {"contact_id": c.id, "body": "Refund requested."}, None)  # no dependency check
             else:
                 submit_retrying(first)  # user_correction: correction never reaches an already-queued instruction
             reported_success = True
@@ -99,6 +108,13 @@ def run_trial(policy, scenario, rng, trial):
             if policy in ABLATE:
                 eng.ABLATIONS.add(ABLATE[policy])
             m = c_start(db, t, u, w, first)
+            if scenario == "dependency_failure":
+                from app.models import FxContact
+                c = db.scalar(select(FxContact).where(FxContact.tenant_id == t.id))
+                m.intent = m.intent  # plan already built from the bound booking; add the dependent notify action
+                refund = next(a for a in eng._actions(db, m) if a.kind == "refund_request")
+                n = eng._new_action(db, m, 9, "notify_contact", "comms_fixture", {"contact_id": c.id, "contact_name": c.name, "body": "Refund requested."}, c.id, None, "communication")
+                n.depends_on = [refund.id]; db.commit()
             if scenario == "user_correction":
                 approve_all(db, m, u.id)
                 eng.bind(db, m, "booking_id", correct.id); db.commit()
@@ -128,7 +144,10 @@ def run_trial(policy, scenario, rng, trial):
             reported_success = m.status == "VERIFIED"  # PARTIALLY_VERIFIED is an honest non-success
         elapsed = time.perf_counter() - start
         n_ok, n_wrong = counts(db, t.id, correct, wrong)
-        if expects_no_effect:
+        n_msgs = db.query(FxMessage).filter(FxMessage.tenant_id == t.id).count()
+        if scenario == "dependency_failure":  # correct = refund absent, message NOT created, no success claim
+            completed = n_ok == 0 and n_msgs == 0 and not reported_success
+        elif expects_no_effect:
             completed = (n_ok + n_wrong == 0) and not reported_success
         elif scenario == "silent_drop":  # the effect cannot exist; the only correct behaviour is not claiming success
             completed = n_wrong == 0 and not reported_success
@@ -139,7 +158,7 @@ def run_trial(policy, scenario, rng, trial):
                 "correct_outcome": completed, "wrong_target": n_wrong > 0, "duplicate": n_ok > 1,
                 "false_success": reported_success and not completed,
                 "verified_outcome": reported_success and completed,
-                "unauthorized_execution": expects_no_effect and (n_ok + n_wrong) > 0, "seconds": round(elapsed, 4)}
+                "unauthorized_execution": (expects_no_effect and (n_ok + n_wrong) > 0) or (scenario == "dependency_failure" and n_msgs > 0), "seconds": round(elapsed, 4)}
 
 
 def summarise(trials):

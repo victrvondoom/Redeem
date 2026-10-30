@@ -41,7 +41,7 @@ const en: Dict = {
   "m.recheck": "Check provider again",
   "m.download": "Download JSON",
   "m.noaction": "Nothing to do",
-  "side.workflows": "Workflows",
+  "side.workflows": "Workflows", "side.demo": "Demo",
 };
 
 const hi: Dict = {
@@ -80,7 +80,7 @@ const hi: Dict = {
   "m.recheck": "प्रदाता से फिर जाँचें",
   "m.download": "JSON डाउनलोड करें",
   "m.noaction": "कुछ करने की ज़रूरत नहीं",
-  "side.workflows": "वर्कफ़्लो"
+  "side.workflows": "वर्कफ़्लो", "side.demo": "डेमो"
 };
 
 const hinglish: Dict = {
@@ -135,7 +135,7 @@ const ta: Dict = {
   "m.recheck": "வழங்குநரை மீண்டும் சரிபார்",
   "m.download": "JSON பதிவிறக்கு",
   "m.noaction": "செய்ய ஏதுமில்லை",
-  "side.workflows": "பணிப்போக்குகள்"
+  "side.workflows": "பணிப்போக்குகள்", "side.demo": "டெமோ"
 };
 
 const te: Dict = {
@@ -163,7 +163,7 @@ const te: Dict = {
   "m.recheck": "ప్రొవైడర్‌ను మళ్లీ తనిఖీ చేయండి",
   "m.download": "JSON డౌన్‌లోడ్",
   "m.noaction": "చేయాల్సింది ఏమీ లేదు",
-  "side.workflows": "వర్క్‌ఫ్లోలు"
+  "side.workflows": "వర్క్‌ఫ్లోలు", "side.demo": "డెమో"
 };
 
 export const MESSAGES: Record<Lang, Dict> = { en, hi, hinglish, ta, te };
