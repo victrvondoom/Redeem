@@ -1,11 +1,13 @@
+
+
 ### Speak Your Need. <span style="color:#ff7a1a">We Take the Lead.</span>
 
 REDEEM turns a spoken request into a **planned, approved, executed and independently verified** outcome, across travel, banking, insurance, telecom, retail, housing, government and healthcare admin. It remembers what you tell it (privately, and only what you confirm).
 
-![backend](https://img.shields.io/badge/backend_tests-222_passing-ff7a1a?style=for-the-badge&labelColor=0a0909)
-![e2e](https://img.shields.io/badge/browser_E2E-40_passing-ff7a1a?style=for-the-badge&labelColor=0a0909)
-![crypto](https://img.shields.io/badge/data-AES--256--GCM_envelope-ff7a1a?style=for-the-badge&labelColor=0a0909)
-![db](https://img.shields.io/badge/PostgreSQL_16-verified_locally-ff7a1a?style=for-the-badge&labelColor=0a0909)
+                                   ![backend](https://img.shields.io/badge/backend_tests-222_passing-ff7a1a?style=for-the-badge&labelColor=0a0909)
+                                      ![e2e](https://img.shields.io/badge/browser_E2E-40_passing-ff7a1a?style=for-the-badge&labelColor=0a0909)
+                                  ![crypto](https://img.shields.io/badge/data-AES--256--GCM_envelope-ff7a1a?style=for-the-badge&labelColor=0a0909)
+                                  ![db](https://img.shields.io/badge/PostgreSQL_16-verified_locally-ff7a1a?style=for-the-badge&labelColor=0a0909)
 
 <a href="https://www.ycombinator.com"><img src="docs/assets/buildathon-banner.png" alt="Y Combinator × Symphony Buildathon, Bolna, Oct 15 to Nov 20, 2026" width="46%"/></a>
 
