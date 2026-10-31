@@ -13,3 +13,8 @@ out/
 test-results/
 playwright-report/
 apps/web/tsconfig.tsbuildinfo
+
+# runtime data (generated keys, blobs, benchmark output) must never be committed
+/data/
+apps/*/data/
+.master_key
