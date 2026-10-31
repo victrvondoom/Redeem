@@ -210,7 +210,8 @@ Honest accounting: [`docs/FINAL_FUNCTIONAL_COMPLETION_REPORT.md`](docs/FINAL_FUN
 
 Backend and browser suites are described under *Run it*. Pass counts are only recorded here from a run that was actually executed (see the line below); nothing is claimed from memory.
 
-- Latest recorded run: _pending, being updated from the real run_
+- **Backend (`apps/api`, pytest): 246 passed, 1 skipped, 0 failed** in 313 s, run on this branch on 2026-10-31 (SQLite).
+- Browser end-to-end (Playwright) and the web build: **not re-run for this README change**.
 
 ## 9. Run it
 
