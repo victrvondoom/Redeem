@@ -14,7 +14,11 @@ from ..models import Action, Mission
 CAPABILITIES: dict[str, frozenset[str]] = {
     "planner": frozenset({"plan"}),
     "specialist": frozenset({"read_context", "prepare_action"}),
-    "observer": frozenset({"observe", "escalate"}),
+    "observer": frozenset({"observe", "escalate", "browser_observe"}),
+    "domain_router": frozenset({"classify"}),
+    "entity_resolver": frozenset({"resolve"}),
+    "policy": frozenset({"evaluate_risk"}),
+    "evidence": frozenset({"gather_evidence", "build_receipt"}),
     "executor": frozenset({"dispatch"}),
     "verifier": frozenset({"read_verify"}),
     "recovery": frozenset({"read_lookup", "escalate"}),

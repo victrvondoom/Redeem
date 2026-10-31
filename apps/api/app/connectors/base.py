@@ -18,3 +18,11 @@ def canonical(obj) -> str:
 
 def sha256_hex(s: str) -> str:
     return hashlib.sha256(s.encode()).hexdigest()
+
+
+class UserActionNeeded(Exception):
+    """A step only the user may perform (login, CAPTCHA, MFA, payment). Raised BEFORE any side effect; the mission pauses."""
+
+    def __init__(self, reason: str, detail: str = ""):
+        super().__init__(f"{reason}: {detail}")
+        self.reason, self.detail = reason, detail

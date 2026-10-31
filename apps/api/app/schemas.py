@@ -58,7 +58,7 @@ class ApproveIn(_Strict):
 
 
 class FaultIn(_Strict):
-    kind: Literal["ack_loss", "silent_drop"]
+    kind: Literal["ack_loss", "silent_drop", "popup", "layout_shift", "login_wall", "login_cleared", "report_edited", "contact_changed", "slow_page"]
 
 
 class ConsentIn(_Strict):
@@ -129,3 +129,28 @@ class KbSearchIn(_Strict):
     query: str = Field(min_length=2, max_length=400)
     domains: list[str] | None = Field(None, max_length=8)
     k: int = Field(6, ge=1, le=15)
+
+
+class UtteranceIn(_Strict):
+    text: str = Field(min_length=1, max_length=500)
+
+
+class ApplyPlanIn(_Strict):
+    plan_id: str = Field(max_length=60)
+
+
+class UndoIn(_Strict):
+    op_id: str = Field(max_length=60)
+
+
+class TransformIn(_Strict):
+    operation: Literal["rotate", "merge", "delete_pages"]
+    document_ids: list[str] = Field(min_length=1, max_length=20)
+    expected_sha256: dict[str, str]
+    degrees: int | None = None
+    pages: list[int] | None = Field(None, max_length=500)
+
+
+class ReportIn(_Strict):
+    title: str = Field(min_length=1, max_length=200)
+    text: str = Field(min_length=1, max_length=100000)

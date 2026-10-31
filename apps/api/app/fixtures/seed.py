@@ -60,5 +60,6 @@ def seed_tenant(db: Session, tenant_id: str) -> None:
                              ("crm_fixture", ["crm:read", "crm:write"]),
                              ("casedesk_fixture", ["case:write"]),
                              ("comms_fixture", ["message:draft"]),
+                             ("browser_fixture", ["browser:operate (simulated apps on loopback only)"]),
                              ("retail_fixture", ["catalogue:read", "stock:reserve", "crm:write"])):
         db.add(Connection(tenant_id=tenant_id, provider=provider, kind="fixture", scopes=scopes))

@@ -19,6 +19,8 @@ C_INTENT = "Flight cancelled for Rahul, refund please"
 
 
 def reset_fixtures(db: Session, tenant_id: str) -> None:
+    from .resolve import browser as _rb
+    _rb.reset_world(tenant_id)
     for model in FIXTURES:
         db.execute(delete(model).where(model.tenant_id == tenant_id))
     seed_tenant(db, tenant_id)

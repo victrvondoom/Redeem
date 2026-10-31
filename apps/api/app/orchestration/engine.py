@@ -13,8 +13,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..config import settings
-from ..connectors.base import ProviderRejected, ProviderTimeout, canonical, sha256_hex
+from ..connectors.base import ProviderRejected, ProviderTimeout, UserActionNeeded, canonical, sha256_hex
 from ..connectors.booking import BookingConnector
+from ..connectors.browser import BrowserConnector
 from ..connectors.calendar import CalendarConnector
 from ..connectors.casedesk import CaseDeskConnector
 from ..connectors.comms import CommsConnector
@@ -25,9 +26,10 @@ from ..domains.language import detect_language, route_domains
 from ..fixtures.seed import POLICY_DOCS
 from ..models import (Action, Case, ActionApproval, ActionEvent, Connection, FxBooking, FxContact, FxCustomer, FxFlightOption, FxLead, FxProduct,
                       Mission, MissionRevision, ProviderOperation, User, VerificationClaim)
+from ..resolve import browser as rb
 from ..reclaim import casework, workflows as rwf
 from ..reclaim import profiles as rprof
-from . import agents
+from . import agents, taskgraph
 from ..policy import safety
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -80,7 +82,7 @@ def transition(db: Session, m: Mission, new: str, reason: str = "") -> None:
 
 def connector_for(name: str, db: Session, tenant_id: str):
     return {"booking_fixture": BookingConnector, "retail_fixture": RetailConnector, "calendar_fixture": CalendarConnector,
-            "crm_fixture": CrmConnector, "casedesk_fixture": CaseDeskConnector, "comms_fixture": CommsConnector}[name](db, tenant_id)
+            "crm_fixture": CrmConnector, "casedesk_fixture": CaseDeskConnector, "comms_fixture": CommsConnector, "browser_fixture": BrowserConnector}[name](db, tenant_id)
 
 
 def connection_active(db: Session, tenant_id: str, provider: str) -> bool:
@@ -181,7 +183,11 @@ def advance(db: Session, m: Mission, confirmed_low_confidence: bool = False,
     m.domains = domains
     if case_domain:
         conf = max(conf, rc[0]["confidence"])
-    if "travel" in domains:
+    if re.search(r"follow[- ]?up", m.intent, re.I) and re.search(r"report", m.intent, re.I) and not re.search(r"flight|airline|refund", m.intent, re.I):
+        m.scenario = "browser_followup"
+        if "crm" not in domains:
+            domains.append("crm")
+    elif "travel" in domains:
         m.scenario = "flight_recovery"
     elif "retail" in domains:
         m.scenario = "retail_reservation"
@@ -208,7 +214,7 @@ def advance(db: Session, m: Mission, confirmed_low_confidence: bool = False,
 
 def _bindings_complete(m: Mission) -> bool:
     need = {"flight_recovery": ["booking_id"], "retail_reservation": ["product_id", "customer_id", "pickup_date"],
-            "crm_followup": ["lead_id", "follow_up_date"], "case_preparation": ["case_domain"]}
+            "crm_followup": ["lead_id", "follow_up_date"], "case_preparation": ["case_domain"], "browser_followup": ["contact_id", "report_id"]}
     return all(m.bindings.get(k) for k in need.get(m.scenario, []))
 
 
@@ -279,6 +285,49 @@ def discover(db: Session, m: Mission) -> None:
                                "message": "For which date should I reserve it? (YYYY-MM-DD)"}
             emit(db, m, "CLARIFICATION", m.clarification)
             return
+    elif m.scenario == "browser_followup":
+        okb, why = rb.browser_available()
+        if not okb:
+            m.clarification = {"type": "browser_unavailable", "message": f"The cloud browser is BLOCKED: {why}. Nothing was attempted."}
+            emit(db, m, "CLARIFICATION", m.clarification)
+            return
+        try:
+            obs = rb.observe_world(db, t, m.id)
+        except rb.UserActionRequired as e:
+            m.paused = True
+            m.clarification = {"type": "user_action_required", "reason": e.reason, "message": f"The CRM needs a {e.reason} step that only you can do. REDEEM will not enter credentials. Complete it, then resume."}
+            emit(db, m, "USER_ACTION_REQUIRED", {"reason": e.reason, "detail": e.detail})
+            return
+        agents.say(db, m, "observer", "browser_observed", {"contacts": len(obs["contacts"]), "reports": len(obs["reports"]), "snapshots": [x["id"] for x in obs["snapshots"]],
+                                                         "fallbacks": obs["fallbacks"]})
+        m.bindings = {**m.bindings, "_obs": {"contacts": len(obs["contacts"]), "reports": len(obs["reports"]), "snapshots": [x["id"] for x in obs["snapshots"]]}}
+        if not m.bindings.get("contact_id"):
+            nm = re.search(r"follow[- ]?up (?:for|to|with) ([A-Z][a-z]+(?: [A-Z][a-z]+)+)", m.intent) or re.search(r"\b([A-Z][a-z]+ [A-Z][a-z]+)\b", m.intent)
+            want = nm.group(1).lower() if nm else ""
+            cands = [c for c in obs["contacts"] if c["name"].lower() == want]
+            if len(cands) == 1:
+                m.bindings = {**m.bindings, "contact_id": cands[0]["id"]}
+                emit(db, m, "ENTITY_BOUND", {"role": "contact_id", "id": cands[0]["id"], "via": "unique_match"})
+            else:
+                pool = cands or obs["contacts"]
+                m.clarification = {"type": "entity_ambiguous", "role": "contact_id", "message": "Which contact? Contacts are matched by record ID, never by name alone." if cands else "I could not find that name in the CRM; pick the contact.",
+                                   "candidates": [{"id": c["id"], "label": f"{c['name']} · {c['id']}", "hint": f"{c['dept']} / {c['org']} · {c['email']}"} for c in pool]}
+                emit(db, m, "CLARIFICATION", m.clarification)
+                return
+        contact = next((c for c in obs["contacts"] if c["id"] == m.bindings["contact_id"]), None)
+        mine = sorted((r for r in obs["reports"] if r["contact_id"] == m.bindings["contact_id"]), key=lambda r: r["modified_at"], reverse=True)
+        if not contact or not mine:
+            m.clarification = {"type": "no_candidates", "message": "No report is linked to that contact."}
+            emit(db, m, "CLARIFICATION", m.clarification)
+            return
+        latest = mine[0]
+        live = rb.report_bytes_sha(rb.world_for(t), latest["id"])
+        if live != latest["sha256"]:
+            m.clarification = {"type": "stale_report", "message": f"The report store lists {latest['id']} with one hash but serves different bytes. I will not send it."}
+            emit(db, m, "CLARIFICATION", m.clarification)
+            return
+        m.bindings = {**m.bindings, "report_id": latest["id"]}
+        emit(db, m, "ENTITY_BOUND", {"role": "report_id", "id": latest["id"], "via": "latest_by_modified_at_corroborated_by_bytes", "sha256": live})
     elif m.scenario == "case_preparation":
         user = db.get(User, m.user_id)
         case = db.get(Case, m.bindings["case_id"]) if m.bindings.get("case_id") else None
@@ -360,6 +409,24 @@ def run_reads(tenant_id: str, booking_id: str | None) -> dict:
     return {"tasks": list(futs), "results": results, "wall_ms": round((time.perf_counter() - t0) * 1000, 2)}
 
 
+def _drop_completed(db: Session, m: Mission, actions: list[Action], notes: list[str]) -> list[Action]:
+    """Corrections keep completed work: an action identical to one already VERIFIED in an earlier revision (same logical operation) is not planned again."""
+    done = {a.idempotency_key: a for a in db.scalars(select(Action).where(Action.mission_id == m.id, Action.revision < m.revision, Action.status == "VERIFIED"))}
+    dropped = [a for a in actions if a.idempotency_key in done]
+    if not dropped:
+        return actions
+    ids = {a.id for a in dropped}
+    kept = [a for a in actions if a.id not in ids]
+    for a in kept:
+        a.depends_on = [d for d in (a.depends_on or []) if d not in ids]    # the dependency is already satisfied by the earlier verified action
+    for a in dropped:
+        notes.append(f"{a.kind} was already completed and verified in an earlier revision; it is kept, not repeated.")
+        emit(db, m, "ACTION_REUSED", {"kind": a.kind, "verified_action": done[a.idempotency_key].id}, a.id)
+        db.delete(a)
+    db.flush()
+    return kept
+
+
 def build_plan(db: Session, m: Mission) -> None:
     t = m.tenant_id
     actions: list[Action] = []
@@ -433,6 +500,26 @@ def build_plan(db: Session, m: Mission) -> None:
             "expected_version": x.version, "note": f"Created from request: {m.intent[:120]}"}, x.id, None, "data_write"))
         summary = f"Schedule follow-up for {x.name} (phone ending {x.phone_last4}) on {m.bindings['follow_up_date']}"
         notes.append("Effects occur in a local CRM fixture.")
+    elif m.scenario == "browser_followup":
+        w = rb.world_for(t)
+        contact = next((c for c in rb.get_json(w.crm.url + "/api/contacts") if c["id"] == m.bindings["contact_id"]), None)
+        rep = next((r for r in rb.get_json(w.docs.url + "/api/reports") if r["id"] == m.bindings["report_id"]), None)
+        if not contact or not rep:
+            transition(db, m, "FAILED", "target_not_found")
+            return
+        sha = rb.report_bytes_sha(w, rep["id"])
+        title = f"Follow up: {rep['title']} {rep['version']}"
+        a1 = _new_action(db, m, 0, "browser_crm_task", "browser_fixture", {"kind_hint": "browser_crm_task", "contact_id": contact["id"], "contact_name": contact["name"], "contact_email": contact["email"], "title": title},
+                         contact["id"], None, "data_write")
+        a2 = _new_action(db, m, 1, "browser_send_report", "browser_fixture", {"kind_hint": "browser_send_report", "contact_id": contact["id"], "contact_name": contact["name"], "to_addr": contact["email"],
+                                                                       "attachment_id": rep["id"], "attachment_title": f"{rep['title']} {rep['version']}", "attachment_sha256": sha,
+                                                                       "body": f"Hi {contact['name'].split()[0]}, please find the latest {rep['title']} ({rep['version']}) attached. [SIMULATED DELIVERY]"},
+                         contact["id"], None, "communication")
+        a2.depends_on = [a1.id]
+        actions += [a1, a2]
+        summary = f"Create a CRM follow-up task for {contact['name']} ({contact['dept']}, {contact['org']}), then send {rep['title']} {rep['version']} (sha256 {sha[:10]}…) to {contact['email']} — SIMULATED DELIVERY"
+        notes += ["Browser actions run in a real Chromium against a SIMULATED CRM, report store and outbox on loopback. Nothing leaves this machine.",
+                  "The approval is bound to the contact record and the report's exact bytes: if either changes before sending, the approval is voided."]
     elif m.scenario == "case_preparation":
         case = db.get(Case, m.bindings["case_id"])
         d = casework.current_draft(db, case) if case else None
@@ -468,12 +555,27 @@ def build_plan(db: Session, m: Mission) -> None:
             "unit_price_paise": p.price_paise}, p.id, p.price_paise * qty, "inventory_write"))
         summary = f"Reserve {qty} × {p.name} for {c.name}, pickup {m.bindings['pickup_date']}"
         notes.append("Effects occur in a local stateful shop fixture.")
+    actions = _drop_completed(db, m, actions, notes)
     for a in actions:
         emit(db, m, "POLICY", safety.evaluate_action(a.kind, a.params, a.risk).as_dict(), a.id)
     reads = run_reads(t, m.bindings.get("booking_id")) if m.scenario == "flight_recovery" else {}
     if reads:
         emit(db, m, "READS_COMPLETED", {"concurrent": True, "tasks": list(reads["tasks"]), "wall_ms": reads["wall_ms"]})
+    read_tasks = {}
+    owners = {"alternatives": "specialist", "policy": "evidence", "calendar": "observer"}
+    for k, v in (reads.get("results", {}) if reads else {}).items():
+        read_tasks[k] = taskgraph.add(db, m, f"read:{k}", owners.get(k, "observer"), status="DONE", output={"items": len(v) if isinstance(v, (list, dict)) else int(bool(v)), "wall_ms": reads["wall_ms"], "concurrent": True})
+    if m.scenario == "browser_followup" and m.bindings.get("_obs"):
+        o = m.bindings["_obs"]
+        read_tasks["observe_browser"] = taskgraph.add(db, m, "observe:browser_dom", "observer", status="DONE", output={"contacts": o["contacts"], "reports": o["reports"], "snapshots": o["snapshots"]})
+    if m.scenario == "case_preparation" and m.bindings.get("case_id"):
+        cs = db.get(Case, m.bindings["case_id"])
+        read_tasks["retrieve_sources"] = taskgraph.add(db, m, "retrieve:sources", "evidence", status="DONE", output={"sources": len(cs.sources), "checklist_covered": sum(1 for x in cs.checklist if x["covered"]), "case_stage": cs.stage})
     graph = [{"id": a.id, "kind": a.kind, "depends_on": a.depends_on, "mode": "write"} for a in actions]
+    taskgraph.compile_plan(db, m, actions, read_tasks, len(actions))
+    agents.say(db, m, "domain_router", "classified", {"domains": m.domains, "scenario": m.scenario})
+    agents.say(db, m, "entity_resolver", "bound", {k: v for k, v in m.bindings.items() if k.endswith("_id")})
+    agents.say(db, m, "policy", "risk_evaluated", {"actions": len(actions), "approval_required": True})
     agents.say(db, m, "planner", "task_graph_compiled", {"nodes": len(graph), "edges": sum(len(g["depends_on"]) for g in graph),
                                                          "independent_writes": sum(1 for g in graph if not g["depends_on"])})
     for dom in sorted({a.connector.replace("_fixture", "") for a in actions}):
@@ -531,7 +633,7 @@ def revise(db: Session, m: Mission, *, intent: str | None = None, reason: str = 
 
 
 ALLOWED_ROLES = {"flight_recovery": {"booking_id"}, "retail_reservation": {"product_id", "customer_id", "pickup_date"},
-                 "crm_followup": {"lead_id", "follow_up_date"}}
+                 "crm_followup": {"lead_id", "follow_up_date"}, "browser_followup": {"contact_id"}}
 
 
 def bind(db: Session, m: Mission, role: str, value: str) -> None:
@@ -552,6 +654,8 @@ def bind(db: Session, m: Mission, role: str, value: str) -> None:
     elif role == "lead_id":
         row = db.get(FxLead, value)
         ok = bool(row and row.tenant_id == t)
+    elif role == "contact_id":
+        ok = any(c["id"] == value for c in rb.get_json(rb.world_for(t).crm.url + "/api/contacts"))
     else:
         ok = bool(re.fullmatch(r"\d{4}-\d{2}-\d{2}", value))
     if not ok:
@@ -637,6 +741,8 @@ def execute(db: Session, m: Mission, before_dispatch: Callable[[Action], None] |
         deps = [db.get(Action, d) for d in (a.depends_on or [])]
         if any(d is None or d.status != "VERIFIED" for d in deps):
             a.status = "SKIPPED_DEPENDENCY"
+            taskgraph.mark(db, m, a.id, "write", "SKIPPED", error="dependency not verified")
+            taskgraph.mark(db, m, a.id, "verify", "SKIPPED")
             emit(db, m, "SKIPPED_DEPENDENCY", {"waiting_on": [d.kind for d in deps if d is None or d.status != "VERIFIED"]}, a.id)
             agents.say(db, m, "planner", "dependent_task_skipped", {"action": a.kind}, a.id)
             db.commit()
@@ -677,9 +783,21 @@ def execute(db: Session, m: Mission, before_dispatch: Callable[[Action], None] |
                                idempotency_key=a.idempotency_key, status="DISPATCHING")
         db.add(op)
         emit(db, m, "DISPATCHING", {"idempotency_key": a.idempotency_key, "snapshot": snapshot}, a.id)
+        taskgraph.mark(db, m, a.id, "write", "RUNNING")
         db.commit()  # persisted BEFORE the side effect
+        token = rb.CURRENT.set({"mission_id": m.id, "action_id": a.id})
         try:
             receipt = conn.submit(a.kind, a.params, a.idempotency_key)
+        except UserActionNeeded as e:  # login / CAPTCHA / MFA / payment: nothing was done; pause for the human
+            db.delete(op)
+            a.status = "AUTHORIZED"
+            m.paused = True
+            taskgraph.mark(db, m, a.id, "write", "BLOCKED", error=f"user action required: {e.reason}")
+            emit(db, m, "USER_ACTION_REQUIRED", {"reason": e.reason, "detail": e.detail, "note": "REDEEM never enters passwords, solves CAPTCHAs, reads OTPs or confirms payments. Do it yourself, then resume."}, a.id)
+            agents.say(db, m, "observer", "user_only_step_detected", {"reason": e.reason}, a.id)
+            transition(db, m, "AUTHORIZED", "user_action_required")
+            db.commit()
+            return
         except ProviderTimeout:
             op.status, a.status = "UNCERTAIN", "UNCERTAIN"
             emit(db, m, "ACK_LOST", {"note": "No confirmation received. Will NOT resend; reconciling by lookup."}, a.id)
@@ -692,6 +810,7 @@ def execute(db: Session, m: Mission, before_dispatch: Callable[[Action], None] |
             emit(db, m, "REJECTED", {"code": e.code}, a.id)
             db.commit()
             continue
+        rb.CURRENT.reset(token)
         op.status, op.provider_ref, op.finished_at, op.response = "ACKED", receipt.get("ref"), utcnow(), receipt
         a.status = "AWAITING_PROVIDER"
         emit(db, m, "ACKED", {"provider_ref": receipt.get("ref")}, a.id)
@@ -736,6 +855,8 @@ def verify_action(db: Session, m: Mission, a: Action, snapshot: dict) -> None:
     a.status = "VERIFIED" if result == "VERIFIED" else "FAILED"
     emit(db, m, "VERIFIED" if result == "VERIFIED" else "VERIFICATION_FAILED", evidence, a.id)
     agents.say(db, m, "verifier", "independent_readback", {"result": result}, a.id)
+    taskgraph.mark(db, m, a.id, "write", "DONE" if result == "VERIFIED" else "FAILED", {"provider_ref": evidence.get("provider_ref")}, None if result == "VERIFIED" else evidence.get("reason"))
+    taskgraph.mark(db, m, a.id, "verify", "DONE" if result == "VERIFIED" else "FAILED", {"result": result, "evidence_keys": sorted(evidence)[:8]}, None if result == "VERIFIED" else evidence.get("reason"))
     if result == "VERIFIED":
         if a.kind == "prepare_case" and a.params.get("case_id"):
             casework.mark_from_mission(db, a.params["case_id"], m.tenant_id, m.user_id, m.id, evidence.get("provider_ref", ""), evidence, "guided_handoff")
@@ -797,6 +918,8 @@ def finalize(db: Session, m: Mission) -> None:
                   "note": "Effects were applied to and verified against a local stateful fixture."},
     }
     emit(db, m, "RECEIPT", {"status": status, "chain_head": head})
+    for t in db.scalars(select(taskgraph.MissionTask).where(taskgraph.MissionTask.mission_id == m.id, taskgraph.MissionTask.kind == "final_receipt", taskgraph.MissionTask.revision == m.revision)):
+        t.status, t.finished_at, t.output = "DONE", utcnow(), {"status": status, "chain_head": head[:16]}
 
 
 def reconcile_mission(db: Session, m: Mission) -> None:
@@ -853,7 +976,7 @@ def mission_view(db: Session, m: Mission) -> dict:
         "language_selected": m.language_selected, "language_detected": m.language_detected, "source": m.source,
         "domains": m.domains, "bindings": m.bindings, "clarification": m.clarification,
         "plan": {**(m.plan or {}), "actions": [_action_view(a) for a in acts]} if m.plan else {},
-        "outcome": m.outcome, "paused": m.paused, "escalated": m.escalated, "created_at": m.created_at.isoformat(), "updated_at": m.updated_at.isoformat(),
+        "outcome": m.outcome, "tasks": taskgraph.view(db, m), "paused": m.paused, "escalated": m.escalated, "created_at": m.created_at.isoformat(), "updated_at": m.updated_at.isoformat(),
     }
 
 

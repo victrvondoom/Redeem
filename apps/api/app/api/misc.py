@@ -19,7 +19,7 @@ from ..models import (Action, ActionApproval, ActionEvent, AuditEvent, AuthSessi
 from ..models import FxCalendarEvent, FxCase, FxContact, FxFlightOption, FxLead, FxMessage
 from ..policy.payment_safety import scan
 from ..reclaim import docintel
-from ..models import Case, CaseDraft, CaseEvent, EvidenceClaim
+from ..models import BrowserSessionRow, BrowserSnapshot, Case, CaseDraft, CaseEvent, EvidenceClaim, MissionTask
 from ..schemas import ScanIn
 
 router = APIRouter(prefix="/api/v1", tags=["platform"])
@@ -245,7 +245,7 @@ def export(ctx: Ctx = Depends(current_ctx)):
 
 
 def _purge_tenant(db, t: str) -> None:
-    for model in (CallEvent, VerificationClaim, ProviderOperation, ActionApproval, ActionEvent, Action,
+    for model in (CallEvent, VerificationClaim, BrowserSnapshot, BrowserSessionRow, MissionTask, ProviderOperation, ActionApproval, ActionEvent, Action,
                   MissionRevision, Mission, Document, Call, ConsentRecord, FxFault, FxRequest, FxReservation,
                   FxBooking, FxProduct, FxCustomer, FxCalendarEvent, FxLead, FxCase, FxContact, FxMessage, FxFlightOption, RegSource, Connection, CaseEvent, CaseDraft, EvidenceClaim, Case):
         db.execute(delete(model).where(model.tenant_id == t))
@@ -258,7 +258,7 @@ def delete_mission(mission_id: str, ctx: Ctx = Depends(current_ctx)):
         raise err(404, "not_found", "Mission not found")
     ctx.db.execute(delete(ProviderOperation).where(
         ProviderOperation.action_id.in_(select(Action.id).where(Action.mission_id == m.id))))
-    for model in (VerificationClaim, ActionApproval, ActionEvent, Action, MissionRevision):
+    for model in (MissionTask, VerificationClaim, ActionApproval, ActionEvent, Action, MissionRevision):
         ctx.db.execute(delete(model).where(model.mission_id == m.id))
     ctx.db.delete(m)
     audit(ctx.db, ctx, "privacy.delete_mission", mission_id)
@@ -272,6 +272,10 @@ def delete_account(response: Response, ctx: Ctx = Depends(current_ctx)):
     audit(ctx.db, ctx, "account.delete", uid)
     _purge_tenant(ctx.db, t)
     shutil.rmtree(Path(settings.data_dir) / "blobs" / t, ignore_errors=True)
+    from ..resolve import browser as _rb
+    from . import workspace as _ws
+    _rb.drop_world(t)
+    _ws.drop_tenant(t)
     ctx.db.execute(delete(AuthSession).where(AuthSession.user_id == uid))
     ctx.db.execute(delete(Membership).where(Membership.user_id == uid))
     ctx.db.execute(delete(Workspace).where(Workspace.tenant_id == t))
@@ -343,8 +347,12 @@ def check_url(body: UrlCheckIn, ctx: Ctx = Depends(current_ctx)):
 
 @router.get("/browser/status")
 def browser_status(ctx: Ctx = Depends(current_ctx)):
+    from ..resolve import browser as _rb
     ok, why = ssrf.browser_execution_allowed()
-    return {"cloud_browser": "AVAILABLE" if ok else "BLOCKED", "reason": why}
+    fx_ok, fx_why = _rb.browser_available()
+    return {"cloud_browser": "AVAILABLE" if ok else "BLOCKED", "reason": why,
+            "fixture_browser": "AVAILABLE" if fx_ok else "BLOCKED", "fixture_reason": ("Real Chromium against simulated loopback apps only; request allow-list enforced." if fx_ok else fx_why),
+            "isolation": "separate browser process and fresh context per run, same host. Not a production isolation boundary."}
 
 
 @router.get("/sources")

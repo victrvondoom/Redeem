@@ -514,3 +514,64 @@ class EvidenceClaim(Base):
     status: Mapped[str] = mapped_column(String(16))  # SUPPORTED | UNSUPPORTED | CONTRADICTED
     support: Mapped[list] = mapped_column(JSON, default=list)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+
+class BrowserSessionRow(Base):
+    """One isolated browser context per mission action (inherited RESOLVE cloud-browser design)."""
+
+    __tablename__ = "browser_sessions"
+    id: Mapped[str] = _id("bse")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    mission_id: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True)
+    action_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    status: Mapped[str] = mapped_column(String(24), default="RUNNING")  # RUNNING | DONE | FAILED | USER_ACTION_REQUIRED
+    origins: Mapped[list] = mapped_column(JSON, default=list)
+    blocked_requests: Mapped[list] = mapped_column(JSON, default=list)
+    user_action: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    started_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    ended_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+
+
+class BrowserSnapshot(Base):
+    __tablename__ = "browser_snapshots"
+    id: Mapped[str] = _id("snp")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    session_id: Mapped[str] = mapped_column(String(40), index=True)
+    mission_id: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True)
+    action_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    phase: Mapped[str] = mapped_column(String(16))  # observe | before | after
+    label: Mapped[str] = mapped_column(String(80))
+    url: Mapped[str] = mapped_column(String(300))
+    title: Mapped[str] = mapped_column(String(200))
+    dom_sha: Mapped[str] = mapped_column(String(64))
+    aria_sha: Mapped[str] = mapped_column(String(64))
+    screenshot_path: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    screenshot_sha: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    fused: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+
+class MissionTask(Base):
+    """Typed task DAG node with ownership, budget, timeout and output; persisted so a mission resumes after refresh/restart."""
+
+    __tablename__ = "mission_tasks"
+    id: Mapped[str] = _id("tsk")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    mission_id: Mapped[str] = mapped_column(ForeignKey("missions.id"), index=True)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    kind: Mapped[str] = mapped_column(String(40))
+    owner: Mapped[str] = mapped_column(String(30))
+    mode: Mapped[str] = mapped_column(String(8), default="read")  # read | write
+    depends_on: Mapped[list] = mapped_column(JSON, default=list)
+    status: Mapped[str] = mapped_column(String(16), default="QUEUED")  # QUEUED RUNNING DONE FAILED SKIPPED BLOCKED CANCELLED
+    input: Mapped[dict] = mapped_column(JSON, default=dict)
+    output: Mapped[dict] = mapped_column(JSON, default=dict)
+    action_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    retry_budget: Mapped[int] = mapped_column(Integer, default=1)
+    timeout_ms: Mapped[int] = mapped_column(Integer, default=10000)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)

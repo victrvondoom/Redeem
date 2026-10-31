@@ -135,7 +135,13 @@ def inject_fault(mission_id: str, body: FaultIn, ctx: Ctx = Depends(current_ctx)
     m = _get(ctx, mission_id)
     if m.status in TERMINAL:
         raise err(409, "mission_final", "Mission already finished")
-    ctx.db.add(FxFault(tenant_id=ctx.tenant_id, kind=body.kind, remaining=1))
+    from .ops import BROWSER_FAULTS, arm_browser_fault
+    if body.kind in BROWSER_FAULTS:
+        if m.scenario != "browser_followup":
+            raise err(409, "not_a_browser_mission", "That fault applies to browser missions only")
+        arm_browser_fault(ctx, m, body.kind)
+    else:
+        ctx.db.add(FxFault(tenant_id=ctx.tenant_id, kind=body.kind, remaining=1))
     engine.emit(ctx.db, m, "FAULT_ARMED", {"kind": body.kind, "scope": "fixture_provider"})
     audit(ctx.db, ctx, "mission.fault", m.id, {"kind": body.kind})
     ctx.db.commit()

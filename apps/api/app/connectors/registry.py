@@ -33,6 +33,8 @@ MANIFESTS = [
              verification="read case row", notes="Internal case record only; nothing filed externally.", **_FX),
     Manifest("comms_fixture", scopes=["message:draft"], capabilities=["notify_contact"], retry="idempotent create", idempotency="idempotency key",
              verification="read draft row", notes="Drafts only; nothing is sent.", **_FX),
+    Manifest("browser_fixture", scopes=["browser:operate"], capabilities=["browser_crm_task", "browser_send_report"], retry="no automatic resend; reconcile by lookup", idempotency="op id in the form",
+             verification="independent read of the CRM/outbox APIs (UI toast is never trusted)", notes="Real Chromium against SIMULATED apps on loopback; request allow-list; user-only steps pause.", **_FX),
     Manifest("bolna", kind="api_key", auth="server-side bearer API key", scopes=["voice:web_call", "voice:outbound"],
              capabilities=["web_call_session", "outbound_call", "execution_readback", "function_tools", "webhook"], rate_limit="provider-side; circuit breaker local",
              retry="reads only; bounded", idempotency="n/a (calls are not retried)", verification="execution read-back", revocable=False, condition="UNCONFIGURED",
