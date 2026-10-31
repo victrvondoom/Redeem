@@ -204,6 +204,17 @@ class Document(Base):
     size: Mapped[int] = mapped_column(Integer)
     text_content: Mapped[str | None] = mapped_column(Text, nullable=True)
     extracted: Mapped[dict] = mapped_column(JSON, default=dict)
+    case_id: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True)
+    domain: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    doc_type: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    fields: Mapped[dict] = mapped_column(JSON, default=dict)
+    relevance: Mapped[dict] = mapped_column(JSON, default=dict)
+    strength: Mapped[dict] = mapped_column(JSON, default=dict)
+    duplicate_of: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    supersedes: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    ocr_status: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    page_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    blob_path: Mapped[str | None] = mapped_column(String(300), nullable=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
 
 
@@ -431,3 +442,75 @@ class FxFlightOption(Base):
     departs: Mapped[str] = mapped_column(String(40))
     price_paise: Mapped[int] = mapped_column(BigInteger)
     seats: Mapped[int] = mapped_column(Integer)
+
+
+class Case(Base):
+    """Consumer case (inherited RECLAIM lifecycle). Every stage output is persisted so a case resumes after refresh/restart."""
+
+    __tablename__ = "cases"
+    __table_args__ = (Index("ix_case_tenant_updated", "tenant_id", "updated_at"),)
+    id: Mapped[str] = _id("cse")
+    tenant_id: Mapped[str] = mapped_column(ForeignKey("tenants.id"), index=True)
+    workspace_id: Mapped[str] = mapped_column(String(40))
+    user_id: Mapped[str] = mapped_column(String(40))
+    mission_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    domain: Mapped[str] = mapped_column(String(30))
+    issue_type: Mapped[str] = mapped_column(String(40), default="other")
+    title: Mapped[str] = mapped_column(String(300))
+    description: Mapped[str] = mapped_column(Text)
+    provider: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    stage: Mapped[str] = mapped_column(String(30), default="INTAKE")
+    status: Mapped[str] = mapped_column(String(24), default="OPEN")
+    intake: Mapped[dict] = mapped_column(JSON, default=dict)
+    entities: Mapped[dict] = mapped_column(JSON, default=dict)
+    missing: Mapped[list] = mapped_column(JSON, default=list)
+    analysis: Mapped[dict] = mapped_column(JSON, default=dict)
+    ranking: Mapped[dict] = mapped_column(JSON, default=dict)
+    sources: Mapped[list] = mapped_column(JSON, default=list)
+    checklist: Mapped[list] = mapped_column(JSON, default=list)
+    selected_action: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    approval: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    handoff: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    outcome: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    claimed_paise: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    incident_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    followup_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+
+class CaseEvent(Base):
+    __tablename__ = "case_events"
+    seq: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    case_id: Mapped[str] = mapped_column(String(40), index=True)
+    type: Mapped[str] = mapped_column(String(40))
+    data: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+
+class CaseDraft(Base):
+    __tablename__ = "case_drafts"
+    __table_args__ = (UniqueConstraint("case_id", "version"),)
+    id: Mapped[str] = _id("drf")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    case_id: Mapped[str] = mapped_column(String(40), index=True)
+    version: Mapped[int] = mapped_column(Integer)
+    body: Mapped[str] = mapped_column(Text)
+    content_hash: Mapped[str] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(16), default="DRAFT")  # DRAFT | APPROVED | SUBMITTED | SUPERSEDED
+    origin: Mapped[str] = mapped_column(String(16), default="generated")  # generated | user_edit
+    cited: Mapped[list] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+
+class EvidenceClaim(Base):
+    __tablename__ = "evidence_claims"
+    id: Mapped[str] = _id("clm")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    case_id: Mapped[str] = mapped_column(String(40), index=True)
+    field: Mapped[str] = mapped_column(String(60))
+    claim: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(16))  # SUPPORTED | UNSUPPORTED | CONTRADICTED
+    support: Mapped[list] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)

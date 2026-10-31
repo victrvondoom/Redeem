@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore", populate_by_name=True)
 
     database_url: str = Field("sqlite:///./redeem.db", validation_alias="REDEEM_DATABASE_URL")
+    data_dir: str = Field("./data", validation_alias="REDEEM_DATA_DIR")
     session_ttl_hours: int = Field(168, validation_alias="REDEEM_SESSION_TTL_HOURS")
     cookie_secure: bool = Field(False, validation_alias="REDEEM_COOKIE_SECURE")
     # Fault injection is a demo/test facility acting only on stateful *fixtures*.

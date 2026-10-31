@@ -31,6 +31,11 @@ def _run(ctx: Ctx, m: Mission, fn, *a, **kw):
     return engine.mission_view(ctx.db, m)
 
 
+@router.post("/missions/{mission_id}/recheck")
+def recheck(mission_id: str, ctx: Ctx = Depends(current_ctx)):
+    return _run(ctx, _get(ctx, mission_id), engine.recheck)
+
+
 @router.post("/missions/{mission_id}/pause")
 def pause(mission_id: str, ctx: Ctx = Depends(current_ctx)):
     audit(ctx.db, ctx, "mission.pause", mission_id)

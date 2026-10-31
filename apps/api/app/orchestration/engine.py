@@ -23,10 +23,11 @@ from ..connectors.retail import RetailConnector
 from ..db import SessionLocal, utcnow
 from ..domains.language import detect_language, route_domains
 from ..fixtures.seed import POLICY_DOCS
-from ..models import (Action, ActionApproval, ActionEvent, Connection, FxBooking, FxContact, FxCustomer, FxFlightOption, FxLead, FxProduct,
-                      Mission, MissionRevision, ProviderOperation, RegSource, VerificationClaim)
+from ..models import (Action, Case, ActionApproval, ActionEvent, Connection, FxBooking, FxContact, FxCustomer, FxFlightOption, FxLead, FxProduct,
+                      Mission, MissionRevision, ProviderOperation, User, VerificationClaim)
+from ..reclaim import casework, workflows as rwf
+from ..reclaim import profiles as rprof
 from . import agents
-from ..policy import citations as cite
 from ..policy import safety
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -101,7 +102,7 @@ def op_key(m: Mission, kind: str, target: str, params: dict) -> str:
 
 # ---------------------------------------------------------------- pipeline
 
-CASE_DOMAINS = ['telecom', 'housing', 'government', 'healthcare', 'insurance', 'ecommerce', 'consumer_rights', 'banking']
+COMPLAINT_CUE = re.compile(r"complain|grievance|not (?:working|fixed)|leak|refus|reject|charge|outage|twice|double|error|incorrect|mistake|unresolved|damag|refund|never used|extra|overcharg|wrong|not (?:been )?(?:received|resolved|refunded|paid|delivered)|pending|delay|deposit|fraud|dispute|problem|issue|cancel|charged|denied|stuck|unauthori|no (?:update|response|resolution)|withhold|not working|harass", re.I)
 WEEKDAYS = {"monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3, "friday": 4, "saturday": 5, "sunday": 6,
             "सोमवार": 0, "शनिवार": 5, "रविवार": 6, "சனி": 5, "శని": 5, "திங்கள்": 0, "సోమ": 0}
 
@@ -171,7 +172,15 @@ def advance(db: Session, m: Mission, confirmed_low_confidence: bool = False,
         m.clarification = {"type": "scam_warning", "message": decision.explanation}
         transition(db, m, "CLASSIFIED")
         return
-    case_domain = next((d for d in domains if d in CASE_DOMAINS), None)
+    rc = [x for x in rprof.classify(m.intent) if x["domain"] in rwf.WF and x["domain"] != "travel"]
+    case_domain = rc[0]["domain"] if rc and COMPLAINT_CUE.search(m.intent) else None
+    for x in rprof.classify(m.intent):
+        mapped = x["domain"]
+        if mapped not in domains and x["confidence"] >= 0.5:
+            domains.append(mapped)
+    m.domains = domains
+    if case_domain:
+        conf = max(conf, rc[0]["confidence"])
     if "travel" in domains:
         m.scenario = "flight_recovery"
     elif "retail" in domains:
@@ -270,6 +279,21 @@ def discover(db: Session, m: Mission) -> None:
                                "message": "For which date should I reserve it? (YYYY-MM-DD)"}
             emit(db, m, "CLARIFICATION", m.clarification)
             return
+    elif m.scenario == "case_preparation":
+        user = db.get(User, m.user_id)
+        case = db.get(Case, m.bindings["case_id"]) if m.bindings.get("case_id") else None
+        if case and case.tenant_id == t:
+            casework.run_pipeline(db, case)
+        else:
+            case = casework.create_case(db, t, m.workspace_id, m.user_id, m.intent, m.bindings["case_domain"], mission_id=m.id, user_name=user.name if user else "")
+            m.bindings = {**m.bindings, "case_id": case.id}
+            emit(db, m, "ENTITY_BOUND", {"role": "case_id", "id": case.id, "via": "case_pipeline", "domain": case.domain})
+        agents.say(db, m, "specialist", "case_pipeline_run", {"case_id": case.id, "stage": case.stage, "sources": len(case.sources), "missing": len(case.missing)}, specialist=case.domain)
+        if case.missing:
+            m.clarification = {"type": "case_info_needed", "case_id": case.id, "message": "A few facts are needed before I can draft anything. Answer on the case page, then press Re-check.",
+                               "questions": case.missing}
+            emit(db, m, "CLARIFICATION", m.clarification)
+            return
     elif m.scenario == "crm_followup":
         if not m.bindings.get("follow_up_date"):
             d = parse_pickup_date(m.intent)
@@ -349,6 +373,14 @@ def build_plan(db: Session, m: Mission) -> None:
             return
         citations = [{k: v for k, v in d.items()} for d in POLICY_DOCS]
         if b.refund_status == "NOT_REQUESTED":
+            user = db.get(User, m.user_id)
+            tc = db.get(Case, m.bindings["travel_case_id"]) if m.bindings.get("travel_case_id") else None
+            if not tc or tc.tenant_id != t:
+                tc = casework.create_case(db, t, m.workspace_id, m.user_id, f"My Fixture Air flight {b.ref} was cancelled by the airline and the refund of \u20b9{b.amount_paise / 100:,.2f} has not been paid. PNR: {b.ref}",
+                                          "travel", mission_id=m.id, user_name=user.name if user else "")
+                m.bindings = {**m.bindings, "travel_case_id": tc.id}
+                emit(db, m, "ENTITY_BOUND", {"role": "travel_case_id", "id": tc.id, "via": "case_pipeline", "status": tc.status})
+            notes.append(f"A travel case was opened for the refund (status {tc.status}): /app/cases/{tc.id}")
             actions.append(_new_action(db, m, 0, "refund_request", "booking_fixture", {
                 "booking_id": b.id, "booking_ref": b.ref, "passenger_name": b.passenger_name,
                 "amount_paise": b.amount_paise, "reason": "involuntary_cancellation"}, b.id, b.amount_paise,
@@ -402,20 +434,20 @@ def build_plan(db: Session, m: Mission) -> None:
         summary = f"Schedule follow-up for {x.name} (phone ending {x.phone_last4}) on {m.bindings['follow_up_date']}"
         notes.append("Effects occur in a local CRM fixture.")
     elif m.scenario == "case_preparation":
-        dom = m.bindings["case_domain"]
-        srcs = list(db.scalars(select(RegSource).where(RegSource.tenant_id == t, RegSource.url.contains(dom))))
-        ids = [x.id for x in srcs]
-        body = f"Complaint category: {dom}\n\nStatement (user's words): {m.intent}\n\n" + (
-            "Sources: " + "; ".join(f"[{x.id}] {x.title} ({x.authority}, {x.published})" for x in srcs) if srcs
-            else "Sources: none. No verified regulatory source is available, so no entitlement or deadline is asserted.")
-        cite.assert_valid(db, t, body, ids)
-        citations_view = [{"id": x.id, "title": x.title, "source": x.url, "effective_date": x.published,
-                           "jurisdiction": x.authority, "is_fixture": x.is_fixture} for x in srcs]
-        citations = citations_view
+        case = db.get(Case, m.bindings["case_id"])
+        d = casework.current_draft(db, case) if case else None
+        if not case or case.tenant_id != t or not d:
+            transition(db, m, "FAILED", "case_not_ready")
+            return
+        citations = [{"id": x["id"], "title": x["title"], "source": x["source_url"] or x["source_path"], "effective_date": "not recorded", "jurisdiction": x["authority"],
+                      "is_fixture": False, "provenance": x["provenance"]} for x in case.sources[:3]]
         actions.append(_new_action(db, m, 0, "prepare_case", "casedesk_fixture", {
-            "domain": dom, "title": f"{dom.title()} complaint: {m.intent[:60]}", "body": body, "source_ids": ids}, "case:" + dom, None, "legal_information"))
-        summary = f"Prepare a {dom} complaint record in your case desk (not filed with any authority)"
-        notes.append("Preparation only: REDEEM has no verified filing channel for this domain.")
+            "domain": case.domain, "title": case.title[:190], "body": d.body, "source_ids": d.cited, "case_id": case.id}, "case:" + case.id, None, "legal_information"))
+        summary = f"Record the {rprof.LABEL[case.domain]} complaint draft (v{d.version}) in your case desk, with official escalation links for you to submit"
+        notes.append("Preparation only: REDEEM has no verified filing channel for this domain. You submit it through the linked portal (guided handoff).")
+        if not case.sources:
+            notes.append("No knowledge passages were retrieved for this domain, so no legal basis is cited or asserted.")
+        notes.append(f"Full case workspace: /app/cases/{case.id}")
     else:
         p, c = db.get(FxProduct, m.bindings["product_id"]), db.get(FxCustomer, m.bindings["customer_id"])
         if not p or p.tenant_id != t or not c or c.tenant_id != t:
@@ -704,6 +736,11 @@ def verify_action(db: Session, m: Mission, a: Action, snapshot: dict) -> None:
     a.status = "VERIFIED" if result == "VERIFIED" else "FAILED"
     emit(db, m, "VERIFIED" if result == "VERIFIED" else "VERIFICATION_FAILED", evidence, a.id)
     agents.say(db, m, "verifier", "independent_readback", {"result": result}, a.id)
+    if result == "VERIFIED":
+        if a.kind == "prepare_case" and a.params.get("case_id"):
+            casework.mark_from_mission(db, a.params["case_id"], m.tenant_id, m.user_id, m.id, evidence.get("provider_ref", ""), evidence, "guided_handoff")
+        elif a.kind == "refund_request" and m.bindings.get("travel_case_id"):
+            casework.mark_from_mission(db, m.bindings["travel_case_id"], m.tenant_id, m.user_id, m.id, evidence.get("provider_ref", ""), evidence, "fixture_provider_request")
     op = db.scalar(select(ProviderOperation).where(ProviderOperation.action_id == a.id))
     agents.observe(db, m, a, op.status if op else None)
     db.commit()
@@ -878,3 +915,11 @@ def resolve_reference(m: Mission, text: str) -> tuple[str, str] | None:
             if m.bindings.get(role):
                 return role, m.bindings[role]
     return None
+
+
+def recheck(db: Session, m: Mission) -> None:
+    """After the user completed missing case facts: resume discovery for a mission waiting on a case."""
+    if m.status != "DISCOVERING" or m.scenario != "case_preparation":
+        raise EngineError(409, "nothing_to_recheck", f"Mission is {m.status}")
+    m.clarification = None
+    discover(db, m)

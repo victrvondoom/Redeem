@@ -1,11 +1,11 @@
-import hashlib
 import json
 import re
+import shutil
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, Query, UploadFile
 from fastapi.responses import Response
-from sqlalchemy import delete, func, select, text
+from sqlalchemy import delete, func, or_, select, text
 
 from ..config import settings
 from ..core.deps import Ctx, audit, current_ctx, err
@@ -18,13 +18,15 @@ from ..models import (Action, ActionApproval, ActionEvent, AuditEvent, AuthSessi
                       Workspace)
 from ..models import FxCalendarEvent, FxCase, FxContact, FxFlightOption, FxLead, FxMessage
 from ..policy.payment_safety import scan
+from ..reclaim import docintel
+from ..models import Case, CaseDraft, CaseEvent, EvidenceClaim
 from ..schemas import ScanIn
 
 router = APIRouter(prefix="/api/v1", tags=["platform"])
 
 _INJECTION = re.compile(r"(ignore (all|previous|prior) (instructions|rules)|you are now|system prompt|"
                         r"approve (all|every)|disregard|do not tell the user)", re.I)
-MAX_UPLOAD = 2_000_000
+MAX_UPLOAD = 5_000_000
 
 
 @router.get("/health")
@@ -78,42 +80,49 @@ def reinstate(provider: str, ctx: Ctx = Depends(current_ctx)):
     return {"provider": provider, "status": c.status}
 
 
-# ---------------------------------------------------------------- documents (Evidence Vault)
-def _doc_json(d: Document) -> dict:
-    return {"id": d.id, "filename": d.filename, "content_type": d.content_type, "sha256": d.sha256,
-            "version": d.version, "size": d.size, "extracted": d.extracted, "created_at": d.created_at.isoformat()}
+# ---------------------------------------------------------------- documents (Evidence Vault, inherited document intelligence)
+def _doc_json(d: Document, detail: bool = False) -> dict:
+    out = {"id": d.id, "filename": d.filename, "content_type": d.content_type, "sha256": d.sha256, "version": d.version, "size": d.size, "extracted": d.extracted,
+           "case_id": d.case_id, "domain": d.domain, "doc_type": d.doc_type, "strength": d.strength, "relevance": d.relevance, "ocr_status": d.ocr_status,
+           "page_count": d.page_count, "supersedes": d.supersedes, "near_duplicate_of": (d.fields or {}).get("near_duplicate_of"), "created_at": d.created_at.isoformat(),
+           "fact_count": len((d.fields or {}).get("facts", []))}
+    if detail:
+        out["facts"] = (d.fields or {}).get("facts", [])
+        out["text"] = (d.text_content or "")[:20000]
+    return out
 
 
 @router.post("/documents", status_code=201)
-async def upload(file: UploadFile = File(...), ctx: Ctx = Depends(current_ctx)):
+async def upload(file: UploadFile = File(...), domain: str | None = None, ctx: Ctx = Depends(current_ctx)):
     data = await file.read(MAX_UPLOAD + 1)
     if len(data) > MAX_UPLOAD:
-        raise err(413, "file_too_large", "Max 2 MB")
-    name = re.sub(r"[^\w.\- ]", "_", file.filename or "upload")[:200]
-    ctype = file.content_type or "application/octet-stream"
-    content = None
-    extracted: dict = {}
-    if ctype.startswith("text/") or name.lower().endswith((".txt", ".md", ".csv")):
-        content = data.decode("utf-8", errors="replace")
-        extracted["booking_refs"] = sorted(set(re.findall(r"\b[A-Z]{2}\d{3,4}\b", content)))
-        extracted["injection_suspected"] = bool(_INJECTION.search(content))
-        extracted["note"] = "Text parsed with regexes only; content is data, never instructions."
-    else:
-        extracted["note"] = "Stored with hash. Text extraction for this file type is not implemented yet."
-    prev = ctx.db.scalar(select(func.max(Document.version)).where(Document.tenant_id == ctx.tenant_id,
-                                                                  Document.filename == name))
-    d = Document(tenant_id=ctx.tenant_id, filename=name, content_type=ctype, sha256=hashlib.sha256(data).hexdigest(),
-                 version=(prev or 0) + 1, size=len(data), text_content=content, extracted=extracted)
-    ctx.db.add(d)
+        raise err(413, "file_too_large", "Max 5 MB")
+    d, info = docintel.ingest(ctx.db, ctx.tenant_id, file.filename or "upload", file.content_type or "application/octet-stream", data, domain)
+    if d.text_content and _INJECTION.search(d.text_content):
+        d.extracted = {**d.extracted, "injection_suspected": True}
     audit(ctx.db, ctx, "document.upload", d.id)
     ctx.db.commit()
-    return _doc_json(d)
+    return {**_doc_json(d), "ingest": info}
 
 
 @router.get("/documents")
-def list_documents(ctx: Ctx = Depends(current_ctx)):
-    rows = ctx.db.scalars(select(Document).where(Document.tenant_id == ctx.tenant_id).order_by(Document.created_at.desc()))
-    return {"items": [_doc_json(d) for d in rows]}
+def list_documents(ctx: Ctx = Depends(current_ctx), q: str | None = Query(None, max_length=100), domain: str | None = None, doc_type: str | None = None,
+                   case_id: str | None = None, sort: str = Query("created", pattern="^(created|strength|name)$"), limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
+    stmt = select(Document).where(Document.tenant_id == ctx.tenant_id)
+    if q:
+        stmt = stmt.where(or_(Document.filename.ilike(f"%{q}%"), Document.text_content.ilike(f"%{q}%")))
+    if domain:
+        stmt = stmt.where(Document.domain == domain)
+    if doc_type:
+        stmt = stmt.where(Document.doc_type == doc_type)
+    if case_id:
+        stmt = stmt.where(Document.case_id == case_id)
+    rows = list(ctx.db.scalars(stmt.order_by(Document.created_at.desc())))
+    if sort == "strength":
+        rows.sort(key=lambda d: -((d.strength or {}).get("score", 0)))
+    elif sort == "name":
+        rows.sort(key=lambda d: d.filename.lower())
+    return {"total": len(rows), "items": [_doc_json(d) for d in rows[offset: offset + limit]]}
 
 
 def _doc(ctx: Ctx, doc_id: str) -> Document:
@@ -123,19 +132,42 @@ def _doc(ctx: Ctx, doc_id: str) -> Document:
     return d
 
 
+@router.get("/documents/{doc_id}")
+def get_document(doc_id: str, ctx: Ctx = Depends(current_ctx)):
+    d = _doc(ctx, doc_id)
+    versions = [{"id": v.id, "version": v.version, "sha256": v.sha256[:12], "created_at": v.created_at.isoformat()}
+                for v in ctx.db.scalars(select(Document).where(Document.tenant_id == ctx.tenant_id, Document.filename == d.filename).order_by(Document.version))]
+    claims = [c for c in ctx.db.scalars(select(EvidenceClaim).where(EvidenceClaim.tenant_id == ctx.tenant_id)) if any(s.get("id") == d.id for s in (c.support or []))]
+    return {**_doc_json(d, True), "versions": versions, "supports_claims": [{"claim": c.claim, "status": c.status, "case_id": c.case_id} for c in claims]}
+
+
 @router.get("/documents/{doc_id}/download")
 def download(doc_id: str, ctx: Ctx = Depends(current_ctx)):
     d = _doc(ctx, doc_id)
-    body = (d.text_content or "").encode()
-    return Response(body, media_type="text/plain", headers={
-        "Content-Disposition": f'attachment; filename="{d.filename}"', "X-Content-Type-Options": "nosniff"})
+    body, ctype = (b"", "text/plain")
+    if d.blob_path and Path(d.blob_path).is_file() and Path(d.blob_path).resolve().is_relative_to(Path(settings.data_dir).resolve()):
+        body, ctype = Path(d.blob_path).read_bytes(), "application/octet-stream"
+    else:
+        body = (d.text_content or "").encode()
+    return Response(body, media_type=ctype, headers={"Content-Disposition": f'attachment; filename="{d.filename}"', "X-Content-Type-Options": "nosniff"})
 
 
 @router.delete("/documents/{doc_id}", status_code=204)
 def delete_document(doc_id: str, ctx: Ctx = Depends(current_ctx)):
-    ctx.db.delete(_doc(ctx, doc_id))
+    d = _doc(ctx, doc_id)
+    cid = d.case_id
+    others = ctx.db.scalar(select(func.count()).select_from(Document).where(Document.tenant_id == ctx.tenant_id, Document.sha256 == d.sha256, Document.id != d.id)) or 0
+    if d.blob_path and not others and Path(d.blob_path).is_file():
+        Path(d.blob_path).unlink(missing_ok=True)
+    ctx.db.delete(d)
     audit(ctx.db, ctx, "document.delete", doc_id)
     ctx.db.commit()
+    if cid:
+        from ..reclaim import casework as _cw
+        c = ctx.db.get(Case, cid)
+        if c:
+            _cw.run_pipeline(ctx.db, c)
+            ctx.db.commit()
 
 
 # ---------------------------------------------------------------- quality lab
@@ -204,6 +236,7 @@ def export(ctx: Ctx = Depends(current_ctx)):
         "missions": [{"id": m.id, "intent": m.intent, "status": m.status, "outcome": m.outcome}
                      for m in db.scalars(select(Mission).where(Mission.tenant_id == t))],
         "documents": [_doc_json(d) for d in db.scalars(select(Document).where(Document.tenant_id == t))],
+        "cases": [{"id": c.id, "title": c.title, "domain": c.domain, "status": c.status, "intake": c.intake, "outcome": c.outcome} for c in db.scalars(select(Case).where(Case.tenant_id == t))],
         "calls": [{"id": c.id, "status": c.status, "transcript": c.transcript}
                   for c in db.scalars(select(Call).where(Call.tenant_id == t))],
         "consents": [{"purpose": c.purpose, "granted": c.granted, "at": c.created_at.isoformat()}
@@ -214,7 +247,7 @@ def export(ctx: Ctx = Depends(current_ctx)):
 def _purge_tenant(db, t: str) -> None:
     for model in (CallEvent, VerificationClaim, ProviderOperation, ActionApproval, ActionEvent, Action,
                   MissionRevision, Mission, Document, Call, ConsentRecord, FxFault, FxRequest, FxReservation,
-                  FxBooking, FxProduct, FxCustomer, FxCalendarEvent, FxLead, FxCase, FxContact, FxMessage, FxFlightOption, RegSource, Connection):
+                  FxBooking, FxProduct, FxCustomer, FxCalendarEvent, FxLead, FxCase, FxContact, FxMessage, FxFlightOption, RegSource, Connection, CaseEvent, CaseDraft, EvidenceClaim, Case):
         db.execute(delete(model).where(model.tenant_id == t))
 
 
@@ -238,6 +271,7 @@ def delete_account(response: Response, ctx: Ctx = Depends(current_ctx)):
     t, uid = ctx.tenant_id, ctx.user.id
     audit(ctx.db, ctx, "account.delete", uid)
     _purge_tenant(ctx.db, t)
+    shutil.rmtree(Path(settings.data_dir) / "blobs" / t, ignore_errors=True)
     ctx.db.execute(delete(AuthSession).where(AuthSession.user_id == uid))
     ctx.db.execute(delete(Membership).where(Membership.user_id == uid))
     ctx.db.execute(delete(Workspace).where(Workspace.tenant_id == t))

@@ -4,6 +4,7 @@ import tempfile
 _tmp = tempfile.mkdtemp(prefix="redeem-test-")
 os.environ["REDEEM_DATABASE_URL"] = f"sqlite:///{_tmp}/test.db"
 os.environ.setdefault("REDEEM_ALLOW_FAULT_INJECTION", "true")
+os.environ["REDEEM_DATA_DIR"] = f"{_tmp}/data"
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
@@ -33,6 +34,9 @@ class Api:
 
     def post(self, url, json=None, **kw):
         return self.c.post(url, json=json, headers=self._h(), **kw)
+
+    def put(self, url, json=None):
+        return self.c.put(url, json=json, headers=self._h())
 
     def patch(self, url, json=None):
         return self.c.patch(url, json=json, headers=self._h())

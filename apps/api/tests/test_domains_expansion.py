@@ -77,9 +77,9 @@ def test_viewer_role_is_read_only(api, db):
 @pytest.mark.parametrize("text,domain", [
     ("My telecom bill shows charges I never used, broadband outage too", "telecom"),
     ("My landlord is withholding my rental deposit", "housing"),
-    ("I want to file a government grievance about municipal water", "government"),
+    ("I want to file a government grievance: my passport application is delayed for months at the department", "government"),
     ("My hospital billing has an error, medical bill is double", "healthcare"),
-    ("My insurance claim was rejected without reason", "insurance"),
+    ("My insurance claim of Rs 2,00,000 was rejected by Star Health at Apollo Hospitals citing a waiting period", "insurance"),
     ("My online order return was refused by the seller", "ecommerce"),
 ])
 def test_case_domains_prepare_verified_records_without_external_filing(api, db, text, domain):
@@ -91,11 +91,13 @@ def test_case_domains_prepare_verified_records_without_external_filing(api, db, 
     assert "not filed" in done["outcome"]["claims"][0]["evidence"]["scope"]
     db.expire_all()
     cases = list(db.scalars(select(FxCase).where(FxCase.tenant_id == api.me["tenant_id"], FxCase.domain == domain)))
-    assert len(cases) == 1
-    if domain == "telecom":
-        assert cases[0].sources and f"[{cases[0].sources[0]}]" in cases[0].body
+    assert len(cases) == 1 and "does not state any legal entitlement" in cases[0].body        # draft never asserts an entitlement as established
+    case = api.get(f"/api/v1/cases/{done['bindings']['case_id']}").json()
+    assert case["status"] == "SUBMITTED" and case["handoff"]["via_mission"] == done["id"] and "nothing has been sent" in case["handoff"]["statement"]
+    if domain == "insurance":
+        assert cases[0].sources == [] and "[kb_" not in cases[0].body
     else:
-        assert "no entitlement or deadline is asserted" in cases[0].body
+        assert cases[0].sources and all(f"[{sid}]" in cases[0].body for sid in cases[0].sources)   # cited ids are the retrieved ones
 
 
 def test_forged_citation_is_rejected(api, db):
@@ -228,3 +230,28 @@ def test_ssrf_guard_and_browser_gate(api):
     assert api.post("/api/v1/safety/check-url", {"url": "https://127.0.0.1/"}).json()["allowed"] is False
     b = api.get("/api/v1/browser/status").json()
     assert b["cloud_browser"] == "BLOCKED" and "isolated" in b["reason"]
+
+
+def test_mission_waits_for_missing_case_facts_then_resumes(api):
+    m = api.post("/api/v1/missions", {"intent": "I want to complain about a problem with the government department"}).json()
+    assert m["scenario"] == "case_preparation" and m["status"] == "DISCOVERING" and m["clarification"]["type"] == "case_info_needed"
+    cid = m["clarification"]["case_id"]
+    assert api.post(f"/api/v1/missions/{m['id']}/recheck").json()["status"] == "DISCOVERING"        # still missing: stays put
+    api.patch(f"/api/v1/cases/{cid}/intake", {"fields": {"issue_type": "delay"}})
+    m2 = api.post(f"/api/v1/missions/{m['id']}/recheck").json()
+    assert m2["status"] == "NEEDS_APPROVAL" and m2["plan"]["actions"][0]["params"]["case_id"] == cid
+    approve_all(api, m2)
+    assert api.post(f"/api/v1/missions/{m['id']}/execute").json()["status"] == "VERIFIED"
+    assert api.get(f"/api/v1/cases/{cid}").json()["status"] == "SUBMITTED"
+    assert api.post(f"/api/v1/missions/{m['id']}/recheck").status_code == 409
+
+
+def test_cancelled_flight_mission_opens_and_updates_a_travel_case(api):
+    m = api.post("/api/v1/missions", {"intent": "Flight FA2041 was cancelled and I need my refund"}).json()
+    tc = m["bindings"]["travel_case_id"]
+    case = api.get(f"/api/v1/cases/{tc}").json()
+    assert case["domain"] == "travel" and case["mission_id"] == m["id"] and any("travel case was opened" in n for n in m["plan"]["notes"])
+    approve_all(api, m)
+    assert api.post(f"/api/v1/missions/{m['id']}/execute").json()["status"] == "VERIFIED"
+    case = api.get(f"/api/v1/cases/{tc}").json()
+    assert case["status"] == "SUBMITTED" and case["handoff"]["mode"] == "fixture_provider_request" and "LOCAL FIXTURE" in case["handoff"]["statement"]

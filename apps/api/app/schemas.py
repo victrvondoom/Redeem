@@ -91,3 +91,41 @@ class UrlCheckIn(_Strict):
 class RejectIn(_Strict):
     action_ids: list[str] = Field(min_length=1, max_length=20)
     reason: str = Field("", max_length=200)
+
+
+class CaseIn(_Strict):
+    text: str = Field(min_length=10, max_length=4000)
+    domain: str | None = Field(None, pattern="^(travel|banking|insurance|telecom|ecommerce|housing|government|healthcare)$")
+    intake: dict[str, str] | None = Field(None, max_length=30)
+    document_ids: list[str] = Field(default_factory=list, max_length=20)
+
+
+class IntakeIn(_Strict):
+    fields: dict[str, str] = Field(min_length=1, max_length=30)
+
+
+class DraftIn(_Strict):
+    body: str = Field(min_length=20, max_length=12000)
+
+
+class RankIn(_Strict):
+    weights: dict[str, float] | None = None
+
+
+class ApproveCaseIn(_Strict):
+    action_key: str = Field(max_length=60)
+    digest: str = Field(min_length=64, max_length=64)
+
+
+class TrackIn(_Strict):
+    kind: Literal["acknowledgement", "response", "escalated", "resolved", "rejected"]
+    reference: str | None = Field(None, max_length=80)
+    note: str = Field("", max_length=1000)
+    document_id: str | None = None
+    amount_inr: float | None = Field(None, ge=0, le=1e9)
+
+
+class KbSearchIn(_Strict):
+    query: str = Field(min_length=2, max_length=400)
+    domains: list[str] | None = Field(None, max_length=8)
+    k: int = Field(6, ge=1, le=15)
