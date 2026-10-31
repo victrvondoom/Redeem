@@ -20,3 +20,6 @@ Last verified: 121 pytest, 20 Playwright, tsc/eslint/build green. Next exact act
 
 ## Cinematic UX + encryption (latest)
 Backend 199 passed; Playwright 35 passed. New: Live Engine page, cinematic landing/theme, AES-256-GCM document encryption at rest, public aggregate stats, README with embedded media. See docs/IMPLEMENTATION_EVIDENCE.md.
+
+## 250-task pass (latest)
+Backend 217 passed, E2E 38. Added: orange/graphite theme, REDEEM intro (Bolna + Wispr Flow cubes; official logos blocked), envelope encryption with rotation, persistent encrypted memory + Memory Center, Privacy Center, Bolna save_answer/recall tools, README rewrite + generated feature table + CI. See docs/TASKS_250_STATUS.md for what is NOT done.

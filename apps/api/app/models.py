@@ -590,3 +590,41 @@ class BenchmarkRun(Base):
     duration_seconds: Mapped[float | None] = mapped_column(nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     started_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+
+class EncryptionKey(Base):
+    """Wrapped per-workspace data-encryption key (envelope encryption). The wrapped value is useless without the KEK."""
+    __tablename__ = "encryption_keys"
+    __table_args__ = (UniqueConstraint("scope", "version"),)
+    id: Mapped[str] = _id("key")
+    scope: Mapped[str] = mapped_column(String(40), index=True)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    kek_id: Mapped[str] = mapped_column(String(20))
+    wrapped: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(10), default="active")  # active | retired
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+
+class MemoryItem(Base):
+    """User-owned persistent memory. `value_enc` is envelope-encrypted; provenance records where the fact came from."""
+    __tablename__ = "memory_items"
+    __table_args__ = (Index("ix_memory_tenant_field", "tenant_id", "field"),)
+    id: Mapped[str] = _id("mem")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    user_id: Mapped[str] = mapped_column(String(40), index=True)
+    project_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    category: Mapped[str] = mapped_column(String(30))
+    field: Mapped[str] = mapped_column(String(60))
+    label: Mapped[str] = mapped_column(String(120))
+    value_enc: Mapped[str] = mapped_column(Text)
+    source_kind: Mapped[str] = mapped_column(String(20))  # bolna_call | bolna_fixture | typed | mission
+    source_ref: Mapped[str | None] = mapped_column(String(60), nullable=True)  # call id
+    segment: Mapped[str | None] = mapped_column(String(40), nullable=True)  # transcript segment index
+    quote_enc: Mapped[str | None] = mapped_column(Text, nullable=True)  # the user's words, encrypted
+    explicit: Mapped[bool] = mapped_column(Boolean, default=True)  # explicit statement vs inference
+    confidence: Mapped[float] = mapped_column(default=0.5)
+    status: Mapped[str] = mapped_column(String(12), default="proposed")  # proposed | confirmed | rejected
+    pinned: Mapped[bool] = mapped_column(Boolean, default=False)
+    expires_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)

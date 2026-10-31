@@ -6,6 +6,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 
 from ..config import settings
+from ..memory import service as service_memory
 from ..core.deps import Ctx, audit, current_ctx, err
 from ..core.security import limiter
 from ..db import SessionLocal
@@ -53,11 +54,15 @@ def create(body: MissionIn, ctx: Ctx = Depends(current_ctx)):
                                                     "via": f"document:{doc.id}@v{doc.version}",
                                                     "document_sha256": doc.sha256})
     audit(ctx.db, ctx, "mission.create", m.id)
+    used = service_memory.relevant(ctx.db, ctx, body.intent)
+    if used:  # only confirmed, relevant memory; values stay out of the ledger (ids and fields only)
+        engine.emit(ctx.db, m, "MEMORY_USED", {"items": [{"id": u["id"], "field": u["field"], "source": u["source_kind"]} for u in used],
+                                              "note": "Confirmed memory prefilled; no repeated questions needed for these fields."})
     try:
         engine.start_mission(ctx.db, m, body.transcript_confidence if body.source == "voice" else None)
     finally:
         ctx.db.commit()
-    return engine.mission_view(ctx.db, m)
+    return engine.mission_view(ctx.db, m) | {"memory_used": used}
 
 
 @router.get("")

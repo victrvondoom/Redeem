@@ -60,3 +60,9 @@ Bolna credentials/numbers, an LLM key, an OCR engine, production browser sandbox
 
 ## Database pass
 Postgres 16 (throwaway server via `scripts/dev_postgres.sh`, UTF8): `alembic upgrade head` OK, `alembic check` no drift, full backend suite **199 passed** (+1 health-dialect test). Found and documented: a SQL_ASCII database makes psycopg return bytes and breaks SQLAlchemy 2.1 startup, so the DB must be UTF8 (compose now passes `--encoding=UTF8`). Added `psycopg[binary]` to requirements, compose healthcheck + data volume, `dialect` in `/health`. Not verified: the Docker build/compose run itself.
+
+## 250-task pass: what was verified
+- Backend 217 passed (new: tests/test_memory.py with 17 tests: mapping incl. Hindi/Tamil/negation/ambiguity, encryption at rest, consent, provenance, confirm/correct/reject/delete, expiry, IDOR on every operation, export + account deletion destroying keys, Bolna tools, DEK rotation, KEK rotation with/without previous key, tamper/wrong-tenant, production fail-closed). `alembic check`: no drift (0007).
+- Playwright 38 (new memory.spec.ts: exact intro text + orange tagline colour `rgb(255,122,26)`, skip/Esc/replay, Memory Center flow, Privacy Center + key rotation).
+- Screenshots: docs/screenshots/v3/*; intro GIF from real frames; emblem/metrics SVGs from scripts/build_readme_assets.py.
+- Not verified/not done: see docs/TASKS_250_STATUS.md. Official partner logos could not be obtained (no network route to the official sites); the intro shows names as text.

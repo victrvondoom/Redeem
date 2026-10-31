@@ -29,7 +29,7 @@ export function HeroDeck() {
           return (
             <div key={k} className="absolute left-0 w-full rounded-2xl border p-4 transition-all duration-700"
               style={{ top: i * 84, transform: `translateZ(${(3 - i) * 46 + (active ? 34 : 0)}px)`, borderColor: active ? "rgb(var(--accent))" : "rgb(var(--line))",
-                background: active ? "linear-gradient(145deg, rgb(10 48 62 / .95), rgb(8 18 30 / .95))" : "linear-gradient(145deg, rgb(18 24 38 / .92), rgb(9 12 20 / .92))",
+                background: active ? "linear-gradient(145deg, rgb(56 28 8 / .95), rgb(8 18 30 / .95))" : "linear-gradient(145deg, rgb(18 24 38 / .92), rgb(9 12 20 / .92))",
                 boxShadow: active ? "0 0 50px rgb(var(--accent) / .45), 0 30px 50px -20px #000" : "0 24px 40px -20px #000", backdropFilter: "blur(8px)" }}>
               <div className="flex items-center gap-3">
                 <span className="grid h-10 w-10 place-items-center rounded-xl" style={{ background: active ? "rgb(var(--accent))" : "rgb(var(--soft))", color: active ? "#03050A" : "rgb(var(--accent))" }}><Icon name={ic} size={20} /></span>

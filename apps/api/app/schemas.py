@@ -62,7 +62,7 @@ class FaultIn(_Strict):
 
 
 class ConsentIn(_Strict):
-    purpose: Literal["voice_call", "call_recording"]
+    purpose: Literal["voice_call", "call_recording", "memory_capture"]
     granted: bool
 
 
@@ -159,3 +159,17 @@ class ReportIn(_Strict):
 class BenchRunIn(_Strict):
     seed: int = Field(7, ge=0, le=10_000)
     n: int = Field(3, ge=1, le=10)
+
+
+class MemoryIngestIn(_Strict):
+    utterance: str = Field(min_length=1, max_length=2000)
+    expected_field: str | None = Field(None, max_length=60)
+    call_id: str | None = Field(None, max_length=40)
+    fixture: bool = False
+    segment: str | None = Field(None, max_length=40)
+    retention_days: int | None = Field(None, ge=1, le=3650)
+
+
+class MemoryPatchIn(_Strict):
+    value: str | None = Field(None, max_length=200)
+    pinned: bool | None = None

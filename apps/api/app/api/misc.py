@@ -19,7 +19,9 @@ from ..models import (Action, ActionApproval, ActionEvent, AuditEvent, AuthSessi
 from ..models import FxCalendarEvent, FxCase, FxContact, FxFlightOption, FxLead, FxMessage
 from ..policy.payment_safety import scan
 from ..reclaim import docintel
+from ..memory import service as service_memory
 from ..security import vault
+from ..models import EncryptionKey, MemoryItem
 from ..models import BenchmarkRun, BrowserSessionRow, BrowserSnapshot, Case, CaseDraft, CaseEvent, EvidenceClaim, MissionTask
 from ..schemas import ScanIn
 
@@ -161,7 +163,7 @@ def download(doc_id: str, ctx: Ctx = Depends(current_ctx)):
     d = _doc(ctx, doc_id)
     body, ctype = (b"", "text/plain")
     if d.blob_path and Path(d.blob_path).is_file() and Path(d.blob_path).resolve().is_relative_to(Path(settings.data_dir).resolve()):
-        body, ctype = vault.read_blob(d.blob_path, ctx.tenant_id), "application/octet-stream"
+        body, ctype = vault.read_blob(ctx.db, d.blob_path, ctx.tenant_id), "application/octet-stream"
     else:
         body = (d.text_content or "").encode()
     return Response(body, media_type=ctype, headers={"Content-Disposition": f'attachment; filename="{d.filename}"', "X-Content-Type-Options": "nosniff"})
@@ -254,6 +256,8 @@ def export(ctx: Ctx = Depends(current_ctx)):
         "cases": [{"id": c.id, "title": c.title, "domain": c.domain, "status": c.status, "intake": c.intake, "outcome": c.outcome} for c in db.scalars(select(Case).where(Case.tenant_id == t))],
         "calls": [{"id": c.id, "status": c.status, "transcript": c.transcript}
                   for c in db.scalars(select(Call).where(Call.tenant_id == t))],
+        "memory": service_memory.listing(db, ctx),
+        "encryption": vault.status(db, t),
         "consents": [{"purpose": c.purpose, "granted": c.granted, "at": c.created_at.isoformat()}
                      for c in db.scalars(select(ConsentRecord).where(ConsentRecord.tenant_id == t))],
     }
@@ -262,8 +266,9 @@ def export(ctx: Ctx = Depends(current_ctx)):
 def _purge_tenant(db, t: str) -> None:
     for model in (BenchmarkRun, CallEvent, VerificationClaim, BrowserSnapshot, BrowserSessionRow, MissionTask, ProviderOperation, ActionApproval, ActionEvent, Action,
                   MissionRevision, Mission, Document, Call, ConsentRecord, FxFault, FxRequest, FxReservation,
-                  FxBooking, FxProduct, FxCustomer, FxCalendarEvent, FxLead, FxCase, FxContact, FxMessage, FxFlightOption, RegSource, Connection, CaseEvent, CaseDraft, EvidenceClaim, Case):
+                  FxBooking, FxProduct, FxCustomer, FxCalendarEvent, FxLead, FxCase, FxContact, FxMessage, FxFlightOption, RegSource, Connection, CaseEvent, CaseDraft, EvidenceClaim, Case, MemoryItem):
         db.execute(delete(model).where(model.tenant_id == t))
+    db.execute(delete(EncryptionKey).where(EncryptionKey.scope == t))  # crypto-shredding: remaining ciphertext copies become unreadable
 
 
 @router.delete("/privacy/missions/{mission_id}", status_code=204)

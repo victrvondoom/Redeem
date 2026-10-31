@@ -477,7 +477,7 @@ def bundle(db: Session, c: Case) -> bytes:
         for d in _docs(db, c):
             if d.blob_path:
                 try:
-                    z.writestr(f"evidence/{d.filename}", vault.read_blob(d.blob_path, c.tenant_id))
+                    z.writestr(f"evidence/{d.filename}", vault.read_blob(db, d.blob_path, c.tenant_id))
                 except OSError:
                     z.writestr(f"evidence/{d.filename}.MISSING.txt", "file bytes unavailable")
     return buf.getvalue()

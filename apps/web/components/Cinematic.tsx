@@ -20,7 +20,7 @@ export function Starfield({ className = "" }: { className?: string }) {
         const x = w / 2 + (s.x + mx * 0.06) * k * w * 0.12, y = h / 2 + (s.y + my * 0.06) * k * h * 0.12;
         if (x < 0 || x > w || y < 0 || y > h) continue;
         const a = Math.min(1, (1 - s.z) * 1.4), r = Math.max(0.4, (1 - s.z) * 2.4);
-        ctx.beginPath(); ctx.fillStyle = `rgba(110,232,255,${a * 0.85})`; ctx.shadowColor = "rgba(70,224,255,.9)"; ctx.shadowBlur = r * 4;
+        ctx.beginPath(); ctx.fillStyle = `rgba(255,170,110,${a * 0.85})`; ctx.shadowColor = "rgba(255,122,26,.9)"; ctx.shadowBlur = r * 4;
         ctx.arc(x, y, r, 0, 6.283); ctx.fill();
       }
       if (!reduce) raf = requestAnimationFrame(draw);
@@ -76,25 +76,66 @@ export function CountUp({ to, ms = 1400 }: { to: number; ms?: number }) {
   return <>{v.toLocaleString("en-IN")}</>;
 }
 
-/** Cinematic opening: two wipes slide away while "RE" arrives from the left and "DEEM" from the right. Plays once per tab session. */
-export function Intro() {
-  const [gone, setGone] = useState(true);
-  useEffect(() => {
-    const go = () => document.documentElement.setAttribute("data-go", "1");
-    let seen = false; try { seen = sessionStorage.getItem("redeem-intro") === "1"; } catch { /* storage may be blocked */ }
-    if (seen || window.matchMedia("(prefers-reduced-motion: reduce)").matches) { go(); return; }
-    setGone(false);
-    try { sessionStorage.setItem("redeem-intro", "1"); } catch { /* ignore */ }
-    const a = setTimeout(go, 2600), b = setTimeout(() => setGone(true), 3600);
-    return () => { clearTimeout(a); clearTimeout(b); };
-  }, []);
-  if (gone) return null;
-  const word = "font-extrabold leading-none tracking-tighter text-[clamp(3.5rem,13vw,10rem)]";
+/** Partner logo slot. Shows ONLY an official asset placed in /public/brand/<file>; if the file is absent it shows the partner's name as plain text (never a redrawn logo). */
+function LogoPlate({ file, name }: { file: string; name: string }) {
+  const [ok, setOk] = useState(true);
   return (
-    <div aria-hidden="true">
-      <div className="intro-wipe-l" /><div className="intro-wipe-r" />
-      <div className="intro-word-l"><span className={`${word} glow-text`}>RE</span></div>
-      <div className="intro-word-r"><span className={`${word} text-ink`} style={{ textShadow: "0 0 40px rgb(var(--accent)/.5)" }}>DEEM</span></div>
+    <span className="grid h-full w-full place-items-center rounded-[14%] bg-[#f3efe9] p-[14%] text-[#1a1614]">
+      {ok ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={`/brand/${file}`} alt={`${name} logo`} onError={() => setOk(false)} className="max-h-full max-w-full object-contain" />
+        : <span className="text-center text-[0.8rem] font-extrabold uppercase tracking-widest">{name}</span>}
+    </span>
+  );
+}
+
+function Cube({ file, name }: { file: string; name: string }) {
+  const face = "absolute inset-0 border border-white/10";
+  return (
+    <div className="cube-3d" style={{ ["--s" as string]: "clamp(120px,22vw,200px)" }}>
+      <div className={`${face} cube-front`} style={{ transform: "translateZ(calc(var(--s) / 2))" }}><LogoPlate file={file} name={name} /></div>
+      <div className={`${face} cube-side`} style={{ transform: "rotateY(90deg) translateZ(calc(var(--s) / 2))" }} />
+      <div className={`${face} cube-side`} style={{ transform: "rotateY(-90deg) translateZ(calc(var(--s) / 2))" }} />
+      <div className={`${face} cube-top`} style={{ transform: "rotateX(90deg) translateZ(calc(var(--s) / 2))" }} />
+      <div className={`${face} cube-side`} style={{ transform: "rotateX(-90deg) translateZ(calc(var(--s) / 2))" }} />
+      <div className={`${face} cube-side`} style={{ transform: "rotateY(180deg) translateZ(calc(var(--s) / 2))" }} />
+    </div>
+  );
+}
+
+/**
+ * REDEEM identity reveal (~4.6s): a Bolna cube arrives from the left and a Wispr Flow cube from the right, they collide and
+ * assemble into the REDEEM emblem, the wordmark rises, the orange tagline follows, then the camera pulls back into the app.
+ * Skippable (button / Esc / Enter), replayable (window event "redeem:intro"), disabled for prefers-reduced-motion. Never blocks the page.
+ */
+export function Intro() {
+  const [on, setOn] = useState(false);
+  const [run, setRun] = useState(0);
+  const end = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const finish = () => { clearTimeout(end.current); setOn(false); document.documentElement.setAttribute("data-go", "1"); };
+  useEffect(() => {
+    const play = () => { setRun((r) => r + 1); setOn(true); clearTimeout(end.current); end.current = setTimeout(finish, 4900); setTimeout(() => document.documentElement.setAttribute("data-go", "1"), 3900); };
+    let seen = false; try { seen = sessionStorage.getItem("redeem-intro") === "1"; } catch { /* storage may be blocked */ }
+    if (seen || window.matchMedia("(prefers-reduced-motion: reduce)").matches) document.documentElement.setAttribute("data-go", "1");
+    else { try { sessionStorage.setItem("redeem-intro", "1"); } catch { /* ignore */ } play(); }
+    const onEvt = () => play();
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") finish(); };
+    window.addEventListener("redeem:intro", onEvt); window.addEventListener("keydown", onKey);
+    return () => { window.removeEventListener("redeem:intro", onEvt); window.removeEventListener("keydown", onKey); clearTimeout(end.current); };
+  }, []);
+  if (!on) return null;
+  return (
+    <div key={run} className="intro-stage" role="presentation" data-testid="intro">
+      <div className="intro-vignette" aria-hidden="true" />
+      <div className="intro-world" aria-hidden="true">
+        <div className="intro-box intro-box-l"><Cube file="bolna.svg" name="Bolna" /></div>
+        <div className="intro-box intro-box-r"><Cube file="wispr-flow.svg" name="Wispr Flow" /></div>
+        <div className="intro-flash" /><div className="intro-ring" />
+        <div className="intro-emblem"><span>R</span></div>
+      </div>
+      <div className="intro-title">
+        <p className="intro-name" aria-label="REDEEM">{"REDEEM".split("").map((c, i) => <span key={i} style={{ animationDelay: `${2.15 + i * 0.07}s` }}>{c}</span>)}</p>
+        <p className="intro-tag">Speak Your Need. We Take the Lead.</p>
+      </div>
+      <button className="intro-skip" onClick={finish}>Skip intro <kbd>Esc</kbd></button>
     </div>
   );
 }

@@ -21,9 +21,9 @@ def test_document_text_and_bytes_are_encrypted_at_rest_but_served_to_owner(api, 
     d = _upload(api)
     did = d["id"]
     raw = db.execute(text("select text_content from documents where id=:i"), {"i": did}).scalar()
-    assert raw.startswith("enc1:") and "Asha" not in raw and "INV-77231" not in raw
+    assert raw.startswith("enc2:") and "Asha" not in raw and "INV-77231" not in raw
     blob = Path(db.execute(text("select blob_path from documents where id=:i"), {"i": did}).scalar()).read_bytes()
-    assert blob.startswith(vault.MAGIC) and b"Asha" not in blob
+    assert blob.startswith(vault.MAGIC2) and b"Asha" not in blob
     assert api.get(f"{B}/documents/{did}/download").content.decode() == SECRET
     assert "INV-77231" in api.get(f"{B}/documents/{did}").json()["text"]
     assert api.get(f"{B}/documents?q=INV-77231").json()["total"] == 1  # search still works on decrypted text
@@ -35,11 +35,11 @@ def test_other_tenant_cannot_read_and_blob_is_bound_to_its_tenant(api, api2, db)
     assert api2.get(f"{B}/documents/{did}/download").status_code == 404
     path = db.execute(text("select blob_path from documents where id=:i"), {"i": did}).scalar()
     with pytest.raises(InvalidTag):
-        vault.read_blob(path, "ten_someone_else")
+        vault.read_blob(db, path, "ten_someone_else")
 
 
 def test_master_key_file_is_private():
-    vault._master_key()
+    vault._load()
     p = Path(settings.data_dir) / ".master_key"
     assert not p.exists() or (p.stat().st_mode & 0o077) == 0
 

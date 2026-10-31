@@ -14,3 +14,5 @@
 11. Voice: no live-call evidence of interruption handling, language switching, or tool calls; agent definition export is unverified against a live Bolna account.
 12. Quality Lab has no latency/cost-per-verified-mission from live data (fixture timings only).
 13. Competitor repos were reviewed at source level but their deployed apps were not exercised.
+5. Official partner logos (Bolna, Wispr Flow, Y Combinator, WeMakeDevs): the build sandbox cannot reach those sites or the GitHub org API, and logos must not be redrawn. Place official files in apps/web/public/brand/ (see its README); the intro cubes pick them up automatically.
+6. No KMS: the key-encryption key comes from REDEEM_MASTER_KEY. Production must set it (REDEEM_ENV=production refuses to start without it).

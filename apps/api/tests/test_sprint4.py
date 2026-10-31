@@ -414,7 +414,7 @@ def test_exported_agent_tools_match_the_endpoints_and_accept_bolna_flat_bodies(a
     from app.voice import agent_config
     cfg = agent_config.build("https://h.example", "S")
     names = {t["name"] for t in cfg["tools"]}
-    assert names == {"start_mission", "mission_reply", "read_back_plan", "interrupt", "search_catalogue", "lookup_booking"}
+    assert names == {"start_mission", "mission_reply", "read_back_plan", "interrupt", "search_catalogue", "lookup_booking", "save_answer", "recall"}
     assert "approve" not in names and "approve" not in " ".join(names)      # no approval tool exists to give the agent
     assert all(t["url"].startswith("https://h.example/api/v1/voice/tools/") and "execution_id" in t["parameters"]["required"] for t in cfg["tools"])
     assert cfg["status"] == "UNVERIFIED_AGAINST_LIVE_BOLNA"

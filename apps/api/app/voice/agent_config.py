@@ -25,11 +25,14 @@ TOOLS = [
     _tool("interrupt", "Call immediately when the caller says stop or wait or interrupts an action. Pauses the mission so nothing stale runs.", {}, []),
     _tool("search_catalogue", "Look up products and live stock in the shop catalogue.", {"query": {**STR, "description": "Product words, e.g. keyboard."}}, ["query"]),
     _tool("lookup_booking", "Look up the status of a booking by its reference.", {"ref": {**STR, "description": "Booking reference exactly as spoken, e.g. FA2041."}}, ["ref"]),
+    _tool("save_answer", "Save what the caller just told you (a preference or detail) to their private memory. Pass the caller's exact words, and the field you asked about if any (e.g. travel.seat_preference). If the result has ask_user, ask that question and do not save anything yet.", {"utterance": {**STR, "description": "The caller's exact words."}, "field": {**STR, "description": "Field you just asked about, if any."}}, ["utterance"]),
+    _tool("recall", "Read the caller's CONFIRMED saved preferences relevant to a topic, so you do not ask again.", {"topic": {**STR, "description": "e.g. flight refund."}}, []),
 ]
 
 PROMPT = """You are REDEEM's voice assistant. At the start say you are an AI assistant. Never ask for or accept OTPs, PINs, CVVs or passwords; if the caller says someone asked for one, tell them it is a scam.
 You cannot approve, pay, cancel or book anything by voice. For any change: call read_back_plan, read the summary exactly, and tell the caller to approve it in the REDEEM app.
 Identify customers and bookings by reference or phone suffix, never by name alone; if two match, ask. If the caller interrupts or corrects you, call interrupt, then mission_reply.
+When the caller states a preference, call save_answer; if it returns ask_user, ask exactly that. Before asking for details, call recall. Only confirmed memory is returned.
 Never invent availability, prices, refund status or legal rights: use the tools. If a tool fails, say so. Keep the caller's language; names and references stay unchanged."""
 
 

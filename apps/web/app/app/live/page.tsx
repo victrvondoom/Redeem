@@ -87,12 +87,12 @@ export default function Live() {
               <span className="text-xs text-muted">{doneN}/{tasks.length} tasks verified</span></div>
             <div className="overflow-x-auto p-3"><svg role="img" aria-label="Mission task graph" viewBox={`0 0 ${g.W} ${g.H}`} className="h-auto w-full">
               {tasks.flatMap((t) => t.depends_on.map((d) => { const a = g.pos[d], b = g.pos[t.id]; if (!a || !b) return null; const on = state(t) !== "idle";
-                return <path key={`${d}-${t.id}`} d={`M${a.x + 140} ${a.y + 24} C ${a.x + 150} ${a.y + 24}, ${b.x - 10} ${b.y + 24}, ${b.x} ${b.y + 24}`} fill="none" stroke={on ? "rgb(70 224 255)" : "rgb(38 48 70)"} strokeWidth={on ? 2 : 1} style={{ filter: on ? "drop-shadow(0 0 4px rgb(70 224 255))" : undefined, transition: "all .4s" }} />; }))}
+                return <path key={`${d}-${t.id}`} d={`M${a.x + 140} ${a.y + 24} C ${a.x + 150} ${a.y + 24}, ${b.x - 10} ${b.y + 24}, ${b.x} ${b.y + 24}`} fill="none" stroke={on ? "rgb(255 122 26)" : "rgb(52 47 44)"} strokeWidth={on ? 2 : 1} style={{ filter: on ? "drop-shadow(0 0 4px rgb(255 122 26))" : undefined, transition: "all .4s" }} />; }))}
               {tasks.map((t) => { const p = g.pos[t.id], s = state(t); return (
                 <g key={t.id} transform={`translate(${p.x},${p.y})`}><g className={s !== "idle" ? "node-pop" : ""} style={{ transformBox: "fill-box", transformOrigin: "center" }}>
-                  <rect width="140" height="48" rx="11" fill={s === "done" ? "rgb(10 48 62)" : "rgb(13 17 27)"} stroke={s === "idle" ? "rgb(38 48 70)" : "rgb(70 224 255)"} strokeWidth={s === "active" ? 2 : 1} style={{ filter: s === "active" ? "drop-shadow(0 0 10px rgb(70 224 255))" : undefined }} />
-                  <text x="10" y="20" fontSize="12" fontWeight="700" fill={s === "idle" ? "rgb(150 163 184)" : "rgb(232 238 247)"}>{t.kind.length > 17 ? t.kind.slice(0, 16) + "…" : t.kind}</text>
-                  <text x="10" y="37" fontSize="10" fill="rgb(150 163 184)">{t.owner} · {s === "done" ? "verified ✓" : s === "active" ? "working…" : "waiting"}</text>
+                  <rect width="140" height="48" rx="11" fill={s === "done" ? "rgb(56 28 8)" : "rgb(22 20 19)"} stroke={s === "idle" ? "rgb(52 47 44)" : "rgb(255 122 26)"} strokeWidth={s === "active" ? 2 : 1} style={{ filter: s === "active" ? "drop-shadow(0 0 10px rgb(255 122 26))" : undefined }} />
+                  <text x="10" y="20" fontSize="12" fontWeight="700" fill={s === "idle" ? "rgb(160 152 146)" : "rgb(240 236 232)"}>{t.kind.length > 17 ? t.kind.slice(0, 16) + "…" : t.kind}</text>
+                  <text x="10" y="37" fontSize="10" fill="rgb(160 152 146)">{t.owner} · {s === "done" ? "verified ✓" : s === "active" ? "working…" : "waiting"}</text>
                 </g></g>); })}
             </svg></div>
           </Tilt>
@@ -108,7 +108,7 @@ export default function Live() {
 
         <div className="card flex flex-wrap items-center gap-3 !p-4">
           <button className="btn-ghost !min-h-[40px]" onClick={() => { if (finished) setCur(0); setPlay((p) => !p || finished); }} aria-label={play ? "Pause playback" : "Play"}>{play ? "❚❚ Pause" : finished ? "↺ Replay" : "▶ Play"}</button>
-          <input type="range" min={0} max={events.length} value={cur} onChange={(e) => { setPlay(false); setCur(Number(e.target.value)); }} aria-label="Playback position" className="min-w-[160px] flex-1 accent-[rgb(70,224,255)]" />
+          <input type="range" min={0} max={events.length} value={cur} onChange={(e) => { setPlay(false); setCur(Number(e.target.value)); }} aria-label="Playback position" className="min-w-[160px] flex-1 accent-[rgb(255,122,26)]" />
           <div role="group" aria-label="Speed" className="flex gap-1">{SPEEDS.map((s) => <button key={s} onClick={() => setSpeed(s)} aria-pressed={speed === s} className={`badge min-h-[32px] ${speed === s ? "bg-teal text-deep" : "bg-soft text-muted"}`}>{s}×</button>)}</div>
         </div>
 

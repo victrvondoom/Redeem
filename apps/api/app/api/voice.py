@@ -218,6 +218,21 @@ async def voice_tool(tool: str, request: Request, token: str = Query("", max_len
     if tool == "lookup_booking":
         b = db.scalar(select(FxBooking).where(FxBooking.tenant_id == t, FxBooking.ref == str(args.get("ref", ""))[:12]))
         return {"found": bool(b), **({"ref": b.ref, "status": b.status, "refund_status": b.refund_status} if b else {})}
+    if tool in ("save_answer", "recall"):
+        from types import SimpleNamespace
+
+        from ..memory import service as mem
+        from ..models import ConsentRecord as CR
+        owner = db.get(User, call.user_id)
+        c = db.scalar(select(CR).where(CR.user_id == call.user_id, CR.purpose == "memory_capture").order_by(CR.created_at.desc(), CR.id.desc()))
+        if not (c and c.granted):
+            return {"saved": False, "reason": "memory_capture_consent_not_granted"}
+        mctx = SimpleNamespace(tenant_id=t, user=owner)
+        if tool == "recall":
+            return {"items": [{"field": r["field"], "value": r["value"]} for r in mem.relevant(db, mctx, str(args.get("topic", ""))[:200])]}
+        r = mem.ingest(db, mctx, str(args.get("utterance", ""))[:1000], str(args["field"])[:60] if args.get("field") else None, "bolna_call", call.id, str(args.get("segment", ""))[:40] or None)
+        db.commit()
+        return {"saved": [s["field"] for s in r["saved"]], "needs_confirmation": r["needs_confirmation"], "ambiguous": r["ambiguous"], "ask_user": r["clarification"]}
     if tool == "start_mission":
         intent = str(args.get("intent", ""))[:2000]
         if len(intent) < 3:

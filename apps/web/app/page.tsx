@@ -88,7 +88,7 @@ export default function Landing() {
 
         <section className="relative overflow-hidden border-t border-line px-4 py-24 text-center sm:px-6"><Starfield /><h2 className="relative text-4xl font-extrabold tracking-tight sm:text-6xl"><span className="glow-text">{t("hero.title1")} {t("hero.title2")}</span></h2><Link href="/register" className="btn-primary relative mt-8">{t("nav.start")}</Link></section>
       </main>
-      <footer className="border-t border-line px-4 py-8 text-sm text-muted sm:px-6"><div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3"><Logo /><p>Built for the Bolna × YC Symphony Buildathon 2026. Not endorsed by Bolna or Y Combinator. Includes MIT-licensed code and data from RESOLVE and RECLAIM.</p></div></footer>
+      <footer className="border-t border-line px-4 py-8 text-sm text-muted sm:px-6"><div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3"><Logo /><button className="btn-ghost !min-h-[36px]" onClick={() => window.dispatchEvent(new Event("redeem:intro"))}>Replay intro</button><p>Built for the Bolna × YC Symphony Buildathon 2026. Not endorsed by Bolna or Y Combinator. Includes MIT-licensed code and data from RESOLVE and RECLAIM.</p></div></footer>
     </>
   );
 }
