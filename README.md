@@ -1,7 +1,3 @@
-<div align="center">
-
-<img src="docs/assets/banner.svg" alt="REDEEM — Speak Your Need. We Take the Lead." width="100%"/>
-
 ### Speak Your Need. <span style="color:#ff7a1a">We Take the Lead.</span>
 
 REDEEM turns a spoken request into a **planned, approved, executed and independently verified** outcome, across travel, banking, insurance, telecom, retail, housing, government and healthcare admin. It remembers what you tell it (privately, and only what you confirm).
