@@ -691,3 +691,57 @@ class ExternalAction(Base):
     mission_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+
+class BrowserSkill(Base):
+    """A browser workflow recorded by performing it once in a real Chromium session (RESOLVE recorded skills). Replays run the same steps in a fresh isolated session."""
+
+    __tablename__ = "browser_skills"
+    id: Mapped[str] = _id("skl")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    steps: Mapped[list] = mapped_column(JSON, default=list)
+    params: Mapped[list] = mapped_column(JSON, default=list)
+    recorded_session_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    runs: Mapped[int] = mapped_column(Integer, default=0)
+    last_status: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+
+class BrowserSkillRun(Base):
+    __tablename__ = "browser_skill_runs"
+    id: Mapped[str] = _id("skr")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    skill_id: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True)
+    session_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    status: Mapped[str] = mapped_column(String(24), default="QUEUED")  # QUEUED|RUNNING|PAUSED|DONE|FAILED|STOPPED|USER_ACTION_REQUIRED
+    step_index: Mapped[int] = mapped_column(Integer, default=0)
+    total_steps: Mapped[int] = mapped_column(Integer, default=0)
+    error: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    uncertain: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+
+class Project(Base):
+    """Project Store: a named folder that groups a user's missions, cases and documents."""
+
+    __tablename__ = "projects"
+    id: Mapped[str] = _id("prj")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    description: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+
+class ProjectItem(Base):
+    __tablename__ = "project_items"
+    __table_args__ = (UniqueConstraint("project_id", "kind", "ref_id"),)
+    id: Mapped[str] = _id("pri")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    project_id: Mapped[str] = mapped_column(String(40), index=True)
+    kind: Mapped[str] = mapped_column(String(12))  # mission | case | document
+    ref_id: Mapped[str] = mapped_column(String(40))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)

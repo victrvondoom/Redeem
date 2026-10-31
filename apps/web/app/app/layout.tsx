@@ -10,10 +10,10 @@ import { useI18n } from "@/lib/i18n";
 
 type NavItem = [href: string, key: string, icon: string, badgeKey?: string];
 const SECTIONS: { title: string; items: NavItem[] }[] = [
-  { title: "Work", items: [["/app", "side.console", "home"], ["/app/cases", "side.cases", "cases", "cases"], ["/app/history", "side.history", "clock"], ["/app/workflows", "side.workflows", "flow"]] },
+  { title: "Work", items: [["/app", "side.console", "home"], ["/app/cases", "side.cases", "cases", "cases"], ["/app/history", "side.history", "clock"], ["/app/workflows", "side.workflows", "flow"], ["/app/projects", "side.projects", "folder"]] },
   { title: "Evidence & tools", items: [["/app/vault", "side.vault", "vault"], ["/app/knowledge", "side.knowledge", "book"], ["/app/files", "side.files", "folder"], ["/app/studio", "side.studio", "pdf"]] },
   { title: "Platform", items: [["/app/domains", "side.domains", "domain"], ["/app/connections", "side.connections", "plug"], ["/app/voice", "side.voice", "voice"], ["/app/memory", "side.memory", "book"], ["/app/graph", "side.graph", "flow"]] },
-  { title: "Trust", items: [["/app/quality", "side.quality", "flask"], ["/app/live", "side.live", "bolt"], ["/app/demo", "side.demo", "play"], ["/app/privacy", "side.privacy", "vault"], ["/app/settings", "side.settings", "gear"]] },
+  { title: "Trust", items: [["/app/quality", "side.quality", "flask"], ["/app/live", "side.live", "bolt"], ["/app/skills", "side.skills", "play"], ["/app/demo", "side.demo", "play"], ["/app/privacy", "side.privacy", "vault"], ["/app/settings", "side.settings", "gear"]] },
 ];
 
 export default function Shell({ children }: { children: ReactNode }) {

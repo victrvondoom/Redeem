@@ -16,13 +16,14 @@ Status words: **Verified** = observed working through its real execution path in
 | Bolna voice and `save_answer`/`recall` tools | Voice Studio, Connections | Yes | Yes | Needs Bolna key | mock-transport tests | **Credential-blocked; request shapes unverified** |
 | Memory capture from a real Bolna call | Memory Center | Yes | Yes | Needs Bolna | transcript fixtures | Credential-blocked |
 | Demo/production separation | banner text in Connections | Yes | n/a | n/a | test | Verified |
-| Live browser video stream, pause/resume mid-run | Live Engine replays the ledger | partial | Yes | n/a | none | Not done (no screencast stream) |
-| Recorded browser skills | none | none | none | n/a | none | Not done |
-| DevOps, Science, Creative adapters; Project Store | none | none | none | n/a | none | Not done |
+| Live browser run viewer with pause/resume/stop mid-run | Browser skills page (frames poll every 0.7 s from the running session) | Yes (background thread, control checked between steps) | Yes (`browser_skill_runs`, `browser_snapshots`) | n/a | `test_live_run_pause_resume_stop`, E2E | **Verified** on the local practice apps (screenshot per step, not a video stream; control is process-local) |
+| Recorded browser skills (record by doing, replay, parameters) | Browser skills page | Yes (`resolve/skills.py`) | Yes (`browser_skills`, migration 0010) | n/a (allow-listed local apps only) | 4 backend tests incl. independent read of the app's API, E2E | **Verified** on the local practice apps; failed run after a click is marked uncertain, never retried |
+| Project Store (group missions, cases, documents) | Projects page | Yes | Yes (`projects`, `project_items`) | n/a | CRUD + IDOR + export test, E2E | **Verified** |
+| DevOps, Science, Creative adapters | none | none | none | n/a | none | Not done |
 | LLM processing, local speech-to-text | none | none | none | needs key / model download | none | Not done |
 | Other connectors (booking, bank, insurance, telecom, government, healthcare portals) | cards | none | none | no adapters | none | Not done |
 | OAuth for other providers, webhooks beyond Bolna | none | none | none | n/a | none | Not done |
-| Cinematic intro (Bolna and Wispr Flow cubes) | Landing | n/a | n/a | n/a | E2E | Partial: official logos not embedded, cubes show names |
+| Cinematic intro (Bolna and Wispr Flow cubes) | Landing | n/a | n/a | n/a | E2E checks both logo images | **Verified**: official logo files downloaded unmodified from bolna.ai and wisprflow.ai (CSS 3D, not WebGL) |
 | WebGL / real-time 3D | none | n/a | n/a | n/a | none | Not done (CSS 3D only) |
 
 ## What this pass could not do, and why

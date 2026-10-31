@@ -9,7 +9,6 @@ The intro shows a cube for **Bolna** (left) and one for **Wispr Flow** (right). 
 | `ycombinator.svg` | official Y Combinator logo (https://www.ycombinator.com) |
 | `wemakedevs.svg` | official WeMakeDevs logo (https://www.wemakedevs.org) |
 
-Until a file exists, the cube shows the partner's **name as plain text**. Logos are never redrawn or approximated. The build sandbox had no access to these sites, so none could be fetched
-(see docs/OPEN_BLOCKERS.md). Use only assets you are permitted to use; naming a partner does not imply endorsement.
+Until a file exists, the cube shows the partner's **name as plain text**. Logos are never redrawn or approximated. `bolna.svg` was downloaded unmodified from https://www.bolna.ai/logos/logo-white.svg and `wispr-flow.svg` from the Flow_Logo-black.svg asset served on https://wisprflow.ai (2026-10-31). Y Combinator and WeMakeDevs SVGs are still absent. Use only assets you are permitted to use; naming a partner does not imply endorsement.
 
 After adding a file, list its name in `manifest.json` (`{"files": ["bolna.svg", "wispr-flow.svg"]}`) so the intro requests it (this avoids 404s for files that are not there).

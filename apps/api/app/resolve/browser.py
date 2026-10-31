@@ -89,6 +89,10 @@ class UserActionRequired(Exception):
         self.reason, self.detail = reason, detail
 
 
+class RunStopped(Exception):
+    """The user pressed Stop on a live run."""
+
+
 class StaleState(Exception):
     pass
 
@@ -199,6 +203,8 @@ class BrowserRun:
         ua = None
         if et is UserActionRequired:
             status, ua = "USER_ACTION_REQUIRED", {"reason": ev.reason, "detail": ev.detail}
+        elif et is RunStopped:
+            status = "STOPPED"
         elif et is not None:
             status = "FAILED"
         try:
