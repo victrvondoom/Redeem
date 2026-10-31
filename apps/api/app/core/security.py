@@ -46,7 +46,10 @@ class RateLimiter:
         while q and now - q[0] > window_s:
             q.popleft()
         if len(q) >= limit:
-            raise HTTPException(429, detail={"code": "rate_limited", "message": "Too many requests"})
+            retry_after = max(1, int(window_s - (now - q[0])) + 1)
+            raise HTTPException(429, detail={"code": "rate_limited", "message": "Too many requests",
+                                             "retry_after_seconds": retry_after},
+                                headers={"Retry-After": str(retry_after)})
         q.append(now)
 
     def reset(self) -> None:

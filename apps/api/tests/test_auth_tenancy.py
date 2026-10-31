@@ -103,3 +103,16 @@ def test_registration_is_rate_limited_per_ip():
     codes = [c.post("/api/v1/auth/register", json={"email": f"r{i}@example.com", "password": "correct-horse-battery", "name": "R"}).status_code
              for i in range(12)]
     assert codes[:10] == [201] * 10 and 429 in codes[10:]
+
+
+def test_rate_limit_response_tells_client_when_to_retry():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    c = TestClient(app)
+    last = None
+    for i in range(12):
+        last = c.post("/api/v1/auth/register", json={"email": f"ra{i}@example.com", "password": "correct-horse-battery", "name": "R"})
+    assert last.status_code == 429
+    assert 1 <= int(last.headers["Retry-After"]) <= 61
+    err = last.json()["error"]
+    assert err["code"] == "rate_limited" and err["retry_after_seconds"] == int(last.headers["Retry-After"])
