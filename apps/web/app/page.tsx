@@ -73,7 +73,7 @@ export default function Landing() {
         <section id="buildathon" className="mx-auto max-w-6xl scroll-mt-24 px-4 pb-32 sm:px-6">
           <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
             <div><h2 className="text-4xl">Built for the Y Combinator <span className="font-sans">×</span> Symphony Buildathon.</h2>
-              <p className="mt-4 max-w-lg text-lg text-muted">A hackathon prototype made with Bolna, 15 October to 20 November 2026. Many features are unfinished.</p></div>
+              <p className="mt-4 max-w-lg text-lg text-muted">Made with Bolna, 15 October to 20 November 2026. Press Demo login to try it.</p></div>
             <div className="flex flex-wrap items-center gap-6">
               <a href="https://www.ycombinator.com" target="_blank" rel="noreferrer" aria-label="Y Combinator"><img src="/brand/ycombinator.png" alt="Y Combinator logo" width={112} height={99} className="h-24 w-auto rounded-xl" /></a>
               <a href="https://www.bolna.ai" target="_blank" rel="noreferrer" aria-label="Bolna"><img src="/brand/bolna-buildathon.png" alt="Bolna, voice AI agents" width={331} height={175} className="h-28 w-auto rounded-xl border border-line" /></a>
