@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from .api import auth, brief, cases, history, integrations, memory, misc, missions, ops, privacy, voice, workspace
+from .api import auth, brief, cases, history, integrations, memory, misc, missions, ops, privacy, skills_projects, voice, workspace
 from .db import SessionLocal, init_db
 from .orchestration.engine import EngineError, recover_incomplete
 
@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="REDEEM API", version="0.1.0", lifespan=lifespan)
-for r in (auth.router, missions.router, voice.router, misc.router, ops.router, cases.router, workspace.router, memory.router, privacy.router, history.router, integrations.router, brief.router):
+for r in (auth.router, missions.router, voice.router, misc.router, ops.router, cases.router, workspace.router, memory.router, privacy.router, history.router, integrations.router, brief.router, skills_projects.router):
     app.include_router(r)
 
 

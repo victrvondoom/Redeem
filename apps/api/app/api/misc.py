@@ -17,6 +17,7 @@ from ..models import (Action, ActionApproval, ActionEvent, AuditEvent, AuthSessi
                       Membership, Mission, MissionRevision, ProviderOperation, Tenant, User, VerificationClaim,
                       Workspace)
 from ..models import FxCalendarEvent, FxCase, FxContact, FxFlightOption, FxLead, FxMessage
+from ..models import BrowserSkill, BrowserSkillRun, Project, ProjectItem
 from ..policy.payment_safety import scan
 from ..reclaim import docintel
 from ..memory import context as ctx_context
@@ -272,6 +273,9 @@ def export(ctx: Ctx = Depends(current_ctx)):
         "encryption": vault.status(db, t),
         "integrations": [{"provider": i.provider, "status": i.status, "account": i.account_label, "scopes": i.scopes, "last_verified_at": i.last_verified_at.isoformat() if i.last_verified_at else None} for i in db.scalars(select(Integration).where(Integration.tenant_id == t))],
         "external_actions": [{"id": a.id, "kind": a.kind, "status": a.status, "provider_ref": a.provider_ref} for a in db.scalars(select(ExternalAction).where(ExternalAction.tenant_id == t))],
+        "projects": [{"id": p.id, "name": p.name, "description": p.description, "items": [{"kind": i.kind, "ref_id": i.ref_id} for i in db.scalars(select(ProjectItem).where(ProjectItem.project_id == p.id, ProjectItem.tenant_id == t))]}
+                     for p in db.scalars(select(Project).where(Project.tenant_id == t))],
+        "browser_skills": [{"id": k.id, "name": k.name, "steps": k.steps, "runs": k.runs} for k in db.scalars(select(BrowserSkill).where(BrowserSkill.tenant_id == t))],
         "consents": [{"purpose": c.purpose, "granted": c.granted, "at": c.created_at.isoformat()}
                      for c in db.scalars(select(ConsentRecord).where(ConsentRecord.tenant_id == t))],
     }
@@ -280,7 +284,8 @@ def export(ctx: Ctx = Depends(current_ctx)):
 def _purge_tenant(db, t: str) -> None:
     for model in (BenchmarkRun, CallEvent, VerificationClaim, BrowserSnapshot, BrowserSessionRow, MissionTask, ProviderOperation, ActionApproval, ActionEvent, Action,
                   MissionRevision, Mission, Document, Call, ConsentRecord, FxFault, FxRequest, FxReservation,
-                  FxBooking, FxProduct, FxCustomer, FxCalendarEvent, FxLead, FxCase, FxContact, FxMessage, FxFlightOption, RegSource, Connection, CaseEvent, CaseDraft, EvidenceClaim, Case, MemoryItem, ConversationTurn, Integration, ExternalAction, OAuthState):
+                  FxBooking, FxProduct, FxCustomer, FxCalendarEvent, FxLead, FxCase, FxContact, FxMessage, FxFlightOption, RegSource, Connection, CaseEvent, CaseDraft, EvidenceClaim, Case, MemoryItem, ConversationTurn, Integration, ExternalAction, OAuthState,
+                  BrowserSkillRun, BrowserSkill, ProjectItem, Project):
         db.execute(delete(model).where(model.tenant_id == t))
     db.execute(delete(EncryptionKey).where(EncryptionKey.scope == t))  # crypto-shredding: remaining ciphertext copies become unreadable
 

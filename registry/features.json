@@ -75,21 +75,21 @@
    "id": "intro",
    "name": "REDEEM identity intro (3D cubes from left/right, orange tagline), skip/replay/reduced-motion",
    "status": "partial",
-   "evidence": "apps/web/tests/memory.spec.ts; partner cubes show names because official logos could not be fetched",
+   "evidence": "apps/web/tests/memory.spec.ts, skills_projects.spec.ts; Bolna and Wispr Flow cubes show the official logo files",
    "source": "REDEEM"
   },
   {
    "id": "brand-logos",
    "name": "Official Bolna / Wispr Flow / YC / WeMakeDevs logo artwork",
-   "status": "blocked",
-   "evidence": "sandbox cannot reach the official sites; drop files into apps/web/public/brand/",
+   "status": "partial",
+   "evidence": "Bolna and Wispr Flow official files embedded unmodified (apps/web/public/brand); Y Combinator and WeMakeDevs SVGs absent",
    "source": "REDEEM"
   },
   {
    "id": "browser-skills",
-   "name": "Recorded browser skills (record, edit, parameterise, replay, repair)",
-   "status": "not_done",
-   "evidence": "not ported from RESOLVE: recording needs a driver thread for an interactive Playwright session",
+   "name": "Recorded browser skills (record by doing, parameterise, replay live with pause/resume/stop)",
+   "status": "verified",
+   "evidence": "apps/api/app/resolve/skills.py, tests/test_skills_projects.py, e2e skills_projects.spec.ts; runs on the local practice apps only; repair/edit of saved steps not built",
    "source": "RESOLVE"
   },
   {
@@ -157,9 +157,16 @@
   },
   {
    "id": "other-adapters",
-   "name": "DevOps, Science, Creative adapters; Project Store; LLM abstraction; local speech-to-text",
+   "name": "DevOps, Science, Creative adapters; LLM abstraction; local speech-to-text",
    "status": "not_done",
    "evidence": "not ported; LLM needs a key, STT needs a model download",
+   "source": "RESOLVE"
+  },
+  {
+   "id": "project-store",
+   "name": "Project Store (group missions, cases and documents)",
+   "status": "verified",
+   "evidence": "apps/api/app/api/skills_projects.py, tests/test_skills_projects.py (CRUD, IDOR, export), e2e",
    "source": "RESOLVE"
   }
  ]

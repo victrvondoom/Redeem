@@ -39,7 +39,13 @@ def browser_available() -> tuple[bool, str]:
         import playwright  # noqa: F401
     except ImportError:
         return False, "playwright is not installed"
-    return (True, "ok") if chromium_path() or os.environ.get("PLAYWRIGHT_BROWSERS_PATH") else (False, "no Chromium binary found (set REDEEM_CHROMIUM)")
+    if chromium_path() or os.environ.get("PLAYWRIGHT_BROWSERS_PATH"):
+        return True, "ok"
+    # `python -m playwright install chromium` puts its managed build in the default cache; Playwright launches it without an explicit path.
+    cache = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "ms-playwright"
+    if any(cache.glob("chromium*")):
+        return True, "ok (playwright-managed chromium)"
+    return False, "no Chromium binary found (set REDEEM_CHROMIUM)"
 
 
 def world_for(tenant_id: str) -> FixtureWorld:
@@ -87,6 +93,10 @@ class UserActionRequired(Exception):
     def __init__(self, reason: str, detail: str = ""):
         super().__init__(f"{reason}: {detail}")
         self.reason, self.detail = reason, detail
+
+
+class RunStopped(Exception):
+    """The user pressed Stop on a live run."""
 
 
 class StaleState(Exception):
@@ -199,6 +209,8 @@ class BrowserRun:
         ua = None
         if et is UserActionRequired:
             status, ua = "USER_ACTION_REQUIRED", {"reason": ev.reason, "detail": ev.detail}
+        elif et is RunStopped:
+            status = "STOPPED"
         elif et is not None:
             status = "FAILED"
         try:

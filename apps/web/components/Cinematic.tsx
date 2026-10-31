@@ -78,10 +78,12 @@ export function CountUp({ to, ms = 1400 }: { to: number; ms?: number }) {
 
 /** Partner logo slot. Shows ONLY an official asset placed in /public/brand/<file>; if the file is absent it shows the partner's name as plain text (never a redrawn logo). */
 function LogoPlate({ file, name }: { file: string; name: string }) {
+  // The official Bolna mark is white-on-transparent, so it sits on a dark plate; Wispr Flow's is black, so it sits on a light one. The files are used unmodified.
+  const dark = file.startsWith("bolna");
   const [ok, setOk] = useState(false);
   useEffect(() => { fetch("/brand/manifest.json").then((r) => (r.ok ? r.json() : { files: [] })).then((m: { files: string[] }) => setOk(m.files.includes(file))).catch(() => setOk(false)); }, [file]);
   return (
-    <span className="grid h-full w-full place-items-center rounded-[14%] bg-[#f3efe9] p-[14%] text-[#1a1614]">
+    <span className={`grid h-full w-full place-items-center rounded-[14%] p-[14%] ${dark ? "bg-[#111] text-white" : "bg-[#f3efe9] text-[#1a1614]"}`}>
       {ok ? // eslint-disable-next-line @next/next/no-img-element
         <img src={`/brand/${file}`} alt={`${name} logo`} onError={() => setOk(false)} className="max-h-full max-w-full object-contain" />
         : <span className="text-center text-[0.8rem] font-extrabold ">{name}</span>}
