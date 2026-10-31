@@ -8,7 +8,7 @@ import subprocess
 import tempfile
 import time
 
-from Xlib import X, XK, display
+from Xlib import XK, X, display
 from Xlib.ext import xtest
 
 from .base import Platform

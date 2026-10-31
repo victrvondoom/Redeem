@@ -1,0 +1,11 @@
+name: windows-bridge
+on: [push, pull_request]
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install ./apps/bridge pytest
+      - run: python -m pytest -q apps/bridge/tests/test_windows.py -rA
