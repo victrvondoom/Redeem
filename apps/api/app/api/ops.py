@@ -12,8 +12,9 @@ from ..models import AuditEvent, Connection, Mission
 from ..orchestration import engine, utterance
 from ..resolve import browser as rb
 from ..models import BrowserSessionRow, BrowserSnapshot
-from ..schemas import RejectIn, UtteranceIn
-from .. import demo, config as _cfg  # noqa: F401
+from ..schemas import BenchRunIn, RejectIn, UtteranceIn
+from .. import config as _cfg
+from .. import demo
 
 router = APIRouter(prefix="/api/v1", tags=["operations"])
 
@@ -118,7 +119,7 @@ def connector_health(ctx: Ctx = Depends(current_ctx)):
 # ---------------------------------------------------------------- demo environment
 @router.post("/demo/scenarios/{scenario}/run", status_code=201)
 def run_demo(scenario: str, ctx: Ctx = Depends(current_ctx)):
-    if scenario not in ("a", "b", "c"):
+    if scenario not in ("a", "b", "c", "d"):
         raise err(404, "not_found", "Unknown scenario")
     audit(ctx.db, ctx, "demo.run", scenario)
     return demo.run(ctx.db, ctx, scenario) | {"environment": "demo fixtures (not a live provider)"}
@@ -227,3 +228,114 @@ def snapshot_png(snap_id: str, ctx: Ctx = Depends(current_ctx)):
     if not x or not x.screenshot_path or not Path(x.screenshot_path).is_file():
         raise err(404, "not_found", "Snapshot not found")
     return Response(Path(x.screenshot_path).read_bytes(), media_type="image/png", headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "private, max-age=60"})
+
+
+# ---------------------------------------------------------------- command center overview (real counts, real attention items)
+@router.get("/overview")
+def overview(ctx: Ctx = Depends(current_ctx)):
+    from ..models import ActionEvent, Case, CaseEvent, Document
+    db, t = ctx.db, ctx.tenant_id
+    ms = list(db.scalars(select(Mission).where(Mission.tenant_id == t)))
+    cs = list(db.scalars(select(Case).where(Case.tenant_id == t)))
+    by_m: dict[str, int] = {}
+    for m in ms:
+        by_m[m.status] = by_m.get(m.status, 0) + 1
+    by_c: dict[str, int] = {}
+    for c in cs:
+        by_c[c.status] = by_c.get(c.status, 0) + 1
+    att = []
+    for m in ms:
+        if m.status == "NEEDS_APPROVAL":
+            att.append({"kind": "approval", "title": "Approve the plan", "detail": (m.plan or {}).get("summary") or m.intent, "href": f"/app/missions/{m.id}", "at": m.updated_at.isoformat()})
+        elif m.status == "DISCOVERING" and m.clarification:
+            att.append({"kind": "question", "title": "A detail is needed", "detail": m.clarification.get("message", ""), "href": f"/app/missions/{m.id}", "at": m.updated_at.isoformat()})
+        elif m.status == "UNCERTAIN":
+            att.append({"kind": "uncertain", "title": "Outcome uncertain", "detail": m.intent, "href": f"/app/missions/{m.id}", "at": m.updated_at.isoformat()})
+        if m.paused and m.status not in ("VERIFIED", "CANCELLED", "FAILED"):
+            att.append({"kind": "paused", "title": "Mission paused", "detail": m.intent, "href": f"/app/missions/{m.id}", "at": m.updated_at.isoformat()})
+        if m.escalated:
+            att.append({"kind": "escalated", "title": "Needs a human", "detail": m.intent, "href": f"/app/missions/{m.id}", "at": m.updated_at.isoformat()})
+    from ..reclaim import casework
+    for c in cs:
+        if c.status == "AWAITING_INFO":
+            att.append({"kind": "case_info", "title": "Case needs facts", "detail": ", ".join(x["field"].replace("_", " ") for x in c.missing), "href": f"/app/cases/{c.id}", "at": c.updated_at.isoformat()})
+        elif c.status == "AWAITING_APPROVAL":
+            att.append({"kind": "case_approval", "title": "Review and approve the draft", "detail": c.title, "href": f"/app/cases/{c.id}", "at": c.updated_at.isoformat()})
+        if casework.overdue(c):
+            att.append({"kind": "overdue", "title": "Follow-up overdue", "detail": c.title, "href": f"/app/cases/{c.id}", "at": c.updated_at.isoformat()})
+    att.sort(key=lambda x: x["at"], reverse=True)
+    ev = list(db.scalars(select(ActionEvent).where(ActionEvent.tenant_id == t, ActionEvent.type.in_(["VERIFIED", "VERIFICATION_FAILED", "APPROVED", "ACK_LOST", "RECONCILED_FOUND", "RECEIPT", "USER_ACTION_REQUIRED",
+                                                                                                        "APPROVAL_INVALIDATED", "HUMAN_ESCALATION", "REVISION_CREATED"])).order_by(ActionEvent.seq.desc()).limit(12)))
+    cev = list(db.scalars(select(CaseEvent).where(CaseEvent.tenant_id == t, CaseEvent.type.in_(["CASE_CREATED", "DOCUMENT_ATTACHED", "DRAFT_EDITED", "APPROVAL_INVALIDATED", "PROVIDER_UPDATE"])).order_by(CaseEvent.seq.desc()).limit(8)))
+    feed = [{"at": e.created_at.isoformat(), "source": "mission", "type": e.type, "mission_id": e.mission_id, "href": f"/app/missions/{e.mission_id}"} for e in ev] + \
+           [{"at": e.created_at.isoformat(), "source": "case", "type": e.type, "case_id": e.case_id, "href": f"/app/cases/{e.case_id}"} for e in cev]
+    feed.sort(key=lambda x: x["at"], reverse=True)
+    n_docs = db.scalar(select(func.count()).select_from(Document).where(Document.tenant_id == t)) or 0
+    n_snap = db.scalar(select(func.count()).select_from(BrowserSnapshot).where(BrowserSnapshot.tenant_id == t)) or 0
+    open_m = [m for m in ms if m.status not in ("VERIFIED", "PARTIALLY_VERIFIED", "FAILED", "CANCELLED", "SUPERSEDED")]
+    return {"counts": {"missions_total": len(ms), "missions_active": len(open_m), "missions_by_status": by_m, "cases_total": len(cs), "cases_by_status": by_c, "documents": n_docs,
+                       "browser_snapshots": n_snap, "verified_outcomes": by_m.get("VERIFIED", 0)},
+            "attention": att[:12], "recent": feed[:14], "scope": "Counts come from this workspace's database; nothing here is a benchmark or external figure."}
+
+
+# ---------------------------------------------------------------- quality lab: runnable deterministic benchmark (separate process, separate database)
+_bench_lock = __import__("threading").Lock()
+
+
+@router.post("/quality/runs", status_code=201)
+def run_benchmark(body: BenchRunIn, ctx: Ctx = Depends(current_ctx)):
+    import json as _json
+    import subprocess
+    import sys
+    import time
+    from pathlib import Path
+    from ..core.security import limiter
+    from ..models import BenchmarkRun
+    limiter.check(f"bench:{ctx.user.id}", 4)
+    if not _bench_lock.acquire(blocking=False):
+        raise err(409, "benchmark_busy", "A benchmark is already running; wait for it to finish.")
+    runner = Path(__file__).resolve().parents[4] / "evals" / "runners" / "benchmark.py"
+    run = BenchmarkRun(tenant_id=ctx.tenant_id, seed=body.seed, trials_per_cell=body.n)
+    ctx.db.add(run)
+    ctx.db.commit()
+    out = Path(_cfg.settings.data_dir) / "benchmarks" / ctx.tenant_id
+    out.mkdir(parents=True, exist_ok=True)
+    path = out / f"{run.id}.json"
+    t0 = time.perf_counter()
+    try:
+        r = subprocess.run([sys.executable, str(runner), "--n", str(body.n), "--seed", str(body.seed), "--out", str(path)], capture_output=True, text=True, timeout=170,
+                           env={k: v for k, v in __import__("os").environ.items() if not k.startswith(("BOLNA_", "REDEEM_DATABASE"))})
+        if r.returncode != 0 or not path.exists():
+            raise RuntimeError((r.stderr or r.stdout)[-300:])
+        data = _json.loads(path.read_text())
+        run.summary, run.raw_path, run.status = data["summary"], str(path), "DONE"
+    except Exception as e:  # noqa: BLE001
+        run.status, run.error = "FAILED", str(e)[:300]
+    finally:
+        run.duration_seconds = round(time.perf_counter() - t0, 2)
+        ctx.db.commit()
+        _bench_lock.release()
+    audit(ctx.db, ctx, "quality.run", run.id)
+    ctx.db.commit()
+    return _run_json(run)
+
+
+def _run_json(r) -> dict:
+    return {"id": r.id, "seed": r.seed, "trials_per_cell": r.trials_per_cell, "status": r.status, "duration_seconds": r.duration_seconds, "error": r.error, "started_at": r.started_at.isoformat(),
+            "summary": r.summary, "mode": "local stateful fixtures (this run executed in a separate process and database)"}
+
+
+@router.get("/quality/runs")
+def list_runs(ctx: Ctx = Depends(current_ctx)):
+    from ..models import BenchmarkRun
+    return {"items": [_run_json(r) for r in ctx.db.scalars(select(BenchmarkRun).where(BenchmarkRun.tenant_id == ctx.tenant_id).order_by(BenchmarkRun.started_at.desc()).limit(20))]}
+
+
+@router.get("/quality/runs/{run_id}/raw")
+def run_raw(run_id: str, ctx: Ctx = Depends(current_ctx)):
+    from pathlib import Path
+    from ..models import BenchmarkRun
+    r = ctx.db.scalar(select(BenchmarkRun).where(BenchmarkRun.id == run_id, BenchmarkRun.tenant_id == ctx.tenant_id))
+    if not r or not r.raw_path or not Path(r.raw_path).is_file():
+        raise err(404, "not_found", "Run not found")
+    return Response(Path(r.raw_path).read_bytes(), media_type="application/json", headers={"Content-Disposition": f'attachment; filename="{run_id}.json"'})

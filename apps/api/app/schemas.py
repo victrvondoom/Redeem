@@ -154,3 +154,8 @@ class TransformIn(_Strict):
 class ReportIn(_Strict):
     title: str = Field(min_length=1, max_length=200)
     text: str = Field(min_length=1, max_length=100000)
+
+
+class BenchRunIn(_Strict):
+    seed: int = Field(7, ge=0, le=10_000)
+    n: int = Field(3, ge=1, le=10)

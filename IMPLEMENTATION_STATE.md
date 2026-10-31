@@ -12,3 +12,8 @@ See docs/EXECUTION_LOG.md, OPEN_BLOCKERS.md, VERIFICATION_EVIDENCE.md, MANUAL_AC
 
 ## Sprint 4
 Last verified: 121 pytest, 20 Playwright, tsc/eslint/build green. Next exact action: with Bolna credentials run M1/M2/M13 (create agent from `python -m app.voice.agent_config`), place one live call, and only then change the bolna manifest condition from UNCONFIGURED. Without credentials: durable worker/outbox (apps/api/app/orchestration/), CallGrade-style intervals in Quality Lab, collapse the ledger on completed missions.
+
+## RESOLVE + RECLAIM inheritance phase (latest)
+- Backend: 195 passed. Playwright: 31 tests (older sprint specs updated to the rewritten UI + new `inherit.spec.ts`), all green.
+- See `docs/FEATURE_INHERITANCE_MATRIX.md` (per-feature status) and `docs/IMPLEMENTATION_EVIDENCE.md` (evidence, limits).
+- Not inherited: recorded browser skills, brief→PDF mission, devops/science/creative adapters, project store, local STT, OCR/LLM.

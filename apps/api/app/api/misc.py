@@ -19,7 +19,7 @@ from ..models import (Action, ActionApproval, ActionEvent, AuditEvent, AuthSessi
 from ..models import FxCalendarEvent, FxCase, FxContact, FxFlightOption, FxLead, FxMessage
 from ..policy.payment_safety import scan
 from ..reclaim import docintel
-from ..models import BrowserSessionRow, BrowserSnapshot, Case, CaseDraft, CaseEvent, EvidenceClaim, MissionTask
+from ..models import BenchmarkRun, BrowserSessionRow, BrowserSnapshot, Case, CaseDraft, CaseEvent, EvidenceClaim, MissionTask
 from ..schemas import ScanIn
 
 router = APIRouter(prefix="/api/v1", tags=["platform"])
@@ -245,7 +245,7 @@ def export(ctx: Ctx = Depends(current_ctx)):
 
 
 def _purge_tenant(db, t: str) -> None:
-    for model in (CallEvent, VerificationClaim, BrowserSnapshot, BrowserSessionRow, MissionTask, ProviderOperation, ActionApproval, ActionEvent, Action,
+    for model in (BenchmarkRun, CallEvent, VerificationClaim, BrowserSnapshot, BrowserSessionRow, MissionTask, ProviderOperation, ActionApproval, ActionEvent, Action,
                   MissionRevision, Mission, Document, Call, ConsentRecord, FxFault, FxRequest, FxReservation,
                   FxBooking, FxProduct, FxCustomer, FxCalendarEvent, FxLead, FxCase, FxContact, FxMessage, FxFlightOption, RegSource, Connection, CaseEvent, CaseDraft, EvidenceClaim, Case):
         db.execute(delete(model).where(model.tenant_id == t))

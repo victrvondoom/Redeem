@@ -57,7 +57,7 @@ test("mission control: pause blocks execution, resume allows it; reject cancels"
   await page.getByRole("button", { name: "Approve 2 actions" }).click();
   await page.getByRole("button", { name: "Run approved actions" }).click();
   await expect(page.getByText(/paused; resume it first/)).toBeVisible();
-  await page.getByRole("button", { name: "Resume" }).click();
+  await page.getByRole("button", { name: "Resume", exact: true }).click();
   await page.getByRole("button", { name: "Run approved actions" }).click();
   await expect(page.getByRole("heading", { name: /Receipt — Done and verified/ })).toBeVisible({ timeout: 15_000 });
 });

@@ -41,7 +41,7 @@ const en: Dict = {
   "m.recheck": "Check provider again",
   "m.download": "Download JSON",
   "m.noaction": "Nothing to do",
-  "side.workflows": "Workflows", "side.demo": "Demo",
+  "side.workflows": "Workflows", "side.demo": "Demo", "side.cases": "Cases", "side.knowledge": "Knowledge", "side.files": "Files", "side.studio": "PDF Studio",
 };
 
 const hi: Dict = {

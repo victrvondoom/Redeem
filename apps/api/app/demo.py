@@ -16,6 +16,7 @@ A_INTENT = ("My flight FA2041 was cancelled. I need my refund, my hotel reschedu
             "and please inform my family. Also find me an alternative.")
 B_INTENT = "A customer called the shop: Amit Patel wants two keyboards reserved for tomorrow"
 C_INTENT = "Flight cancelled for Rahul, refund please"
+D_INTENT = "Prepare a follow-up for Jordan Lee using the latest report, update the CRM and send it after I approve."
 
 
 def reset_fixtures(db: Session, tenant_id: str) -> None:
@@ -89,4 +90,19 @@ def run(db: Session, ctx: Ctx, scenario: str) -> dict:
         n = lambda b: db.query(FxRequest).filter(FxRequest.tenant_id == t, FxRequest.booking_id == b.id, FxRequest.kind == "refund_request").count()  # noqa: E731
         return {"scenario": "c", "mission_id": m.id, "status": m.status, "revision": m.revision, "stale_approval_replay_blocked": replay_blocked,
                 "refund_requests_on_intended_booking": n(verma), "refund_requests_on_wrong_booking": n(sharma)}
+    if scenario == "d":
+        m = _new(db, ctx, D_INTENT)
+        engine.bind(db, m, "contact_id", "C-104")   # "the one from Operations"
+        db.commit()
+        db.refresh(m)
+        from .resolve import browser as rb
+        w = rb.world_for(t)
+        import sqlite3
+        _approve_all(db, ctx, m)
+        engine.execute(db, m)
+        db.commit()
+        with sqlite3.connect(str(w.crm.db_path)) as c, sqlite3.connect(str(w.outbox.db_path)) as o:
+            tasks = c.execute("SELECT COUNT(*) FROM ground_truth WHERE kind='task_created'").fetchone()[0]
+            msgs = o.execute("SELECT COUNT(*) FROM ground_truth WHERE kind='message_committed'").fetchone()[0]
+        return {"scenario": "d", "mission_id": m.id, "status": m.status, "crm_tasks_created": tasks, "messages_sent_simulated": msgs}
     raise ValueError(scenario)

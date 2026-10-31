@@ -291,3 +291,13 @@ def test_stop_cancels_a_running_plan_and_voids_approvals(api):
     r = api.post(f"{B}/missions/{m['id']}/utterance", {"text": "stop"}).json()
     assert r["ok"] is True and r["mission"]["status"] == "CANCELLED"
     assert api.post(f"{B}/missions/{m['id']}/execute").status_code == 409
+
+
+def test_demo_scenario_d_browser_follow_up_is_repeatable_and_verified(api):
+    for _ in range(2):
+        r = api.post(f"{B}/demo/scenarios/d/run").json()
+        assert r["status"] == "VERIFIED" and r["crm_tasks_created"] == 1 and r["messages_sent_simulated"] == 1   # reset between runs: exactly one of each
+        assert "not a live provider" in r["environment"]
+    assert "report_followup" in {w["id"] for w in api.get(f"{B}/workflows").json()["items"]}
+    w = api.post(f"{B}/workflows/report_followup/start", {"inputs": {"name": "Jordan Lee"}}).json()
+    assert w["mission"]["status"] == "DISCOVERING" and w["mission"]["clarification"]["type"] == "entity_ambiguous"

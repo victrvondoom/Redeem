@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, ApiError, type Mission } from "@/lib/api";
 import { inr } from "@/lib/format";
 import { Empty, Tag } from "./ui";
+import { Dag, type TaskNode } from "./viz";
 
 type Evidence = { id: string; category: string; title: string; source: string; timestamp: string | null; content_hash: string; verification_status: string; action_id: string | null };
 type AgentMsg = { seq: number; agent: string; kind: string; at: string };
@@ -95,6 +96,78 @@ export function AgentActivity({ missionId, refreshKey }: { missionId: string; re
       <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Filter by agent"><button className={`badge ${who === "" ? "bg-deep text-white" : "bg-soft text-muted"}`} onClick={() => setWho("")}>All</button>
         {roles.map((r) => <button key={r} className={`badge ${who === r ? "bg-deep text-white" : "bg-soft text-muted"}`} onClick={() => setWho(r)}>{r}</button>)}</div>
       <ul className="mt-3 space-y-1 text-sm">{shown.map((i) => (<li key={i.seq} className="flex gap-3"><span className="w-28 shrink-0 font-semibold">{i.agent}</span><span className="text-muted">{i.kind.replaceAll("_", " ")}</span></li>))}</ul>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------- task DAG, browser sessions, commands (inherited RESOLVE surfaces)
+
+export function TaskGraph({ tasks }: { tasks: TaskNode[] }) {
+  const [sel, setSel] = useState<TaskNode | null>(null);
+  if (!tasks?.length) return null;
+  const rev = Math.max(...tasks.map((t) => t.revision));
+  const cur = tasks.filter((t) => t.revision === rev);
+  const count = (s: string) => cur.filter((t) => t.status === s).length;
+  return (
+    <section className="card" aria-labelledby="dag-h">
+      <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="dag-h" className="text-lg font-bold">Task graph</h2>
+        <p className="text-xs text-muted">revision {rev} · {cur.length} tasks · {count("DONE")} done · {count("RUNNING")} running · {count("FAILED")} failed · {count("SKIPPED")} skipped · {count("QUEUED")} queued</p></div>
+      <p className="mt-1 text-sm text-muted">Every node has an owner role, dependencies, a timeout and a retry budget, and is persisted. Reads can run concurrently; writes are serialised and gated on their dependencies.</p>
+      <div className="mt-3"><Dag tasks={tasks} selected={sel?.id} onSelect={setSel} /></div>
+      {sel && (<div className="mt-3 rounded-xl bg-soft p-4 text-sm"><p className="font-semibold">{sel.kind} <Tag>{sel.owner}</Tag> <Tag tone={sel.status === "DONE" ? "teal" : sel.status === "FAILED" ? "danger" : "amber"}>{sel.status.toLowerCase()}</Tag> <Tag>{sel.mode}</Tag></p>
+        <p className="mt-1 text-xs text-muted">attempts {sel.attempts}/{sel.retry_budget + 1}{sel.error ? ` · error: ${sel.error}` : ""}</p>
+        {Object.keys(sel.output).length > 0 && <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap text-xs">{JSON.stringify(sel.output, null, 1)}</pre>}</div>)}
+    </section>
+  );
+}
+
+type Snap = { id: string; phase: string; label: string; url: string; title: string; dom_sha: string; aria_sha: string; screenshot_sha: string; screenshot_url: string; fused: { api_sha: string | null; elements: number } };
+type Sess = { id: string; status: string; origins: string[]; blocked_requests: string[]; user_action: { reason: string } | null; note: string | null; started_at: string; snapshots: Snap[] };
+
+export function BrowserPanel({ missionId, refreshKey }: { missionId: string; refreshKey: string }) {
+  const [items, setItems] = useState<Sess[]>([]);
+  const [shot, setShot] = useState<Snap | null>(null);
+  useEffect(() => { api<{ items: Sess[] }>(`/browser/sessions?mission_id=${missionId}`).then((r) => setItems(r.items)).catch(() => undefined); }, [missionId, refreshKey]);
+  if (!items.length) return null;
+  return (
+    <section className="card" aria-labelledby="br-h">
+      <div className="flex flex-wrap items-center gap-2"><h2 id="br-h" className="text-lg font-bold">Browser sessions</h2><Tag tone="amber">real Chromium · simulated apps</Tag></div>
+      <p className="mt-1 text-sm text-muted">A fresh browser context per run, restricted to the simulated CRM, report store and outbox on loopback. Each action is recorded before and after; the page&apos;s own success message is never trusted.</p>
+      <ul className="mt-3 space-y-3">{items.map((s) => (
+        <li key={s.id} className="rounded-xl border border-line p-4 text-sm">
+          <div className="flex flex-wrap items-center gap-2"><Tag tone={s.status === "DONE" ? "teal" : s.status === "USER_ACTION_REQUIRED" ? "amber" : "danger"}>{s.status.replaceAll("_", " ").toLowerCase()}</Tag><code className="text-xs">{s.id}</code>
+            <span className="text-xs text-muted">{s.blocked_requests.length} blocked outside request(s)</span>{s.user_action && <Tag tone="amber">waiting for you: {s.user_action.reason}</Tag>}</div>
+          {s.note && <p className="mt-1 text-xs text-muted">Adapted: {s.note}</p>}
+          <ul className="mt-2 grid gap-2 sm:grid-cols-2">{s.snapshots.map((x) => (
+            <li key={x.id}><button onClick={() => setShot(x)} className="w-full rounded-lg bg-soft p-2 text-left hover:ring-2 hover:ring-indigo"><span className="flex items-center gap-2"><Tag tone={x.phase === "after" ? "teal" : x.phase === "before" ? "amber" : "indigo"}>{x.phase}</Tag><span className="truncate text-xs font-semibold">{x.label}</span></span>
+              <span className="mt-1 block text-[11px] text-muted">dom {x.dom_sha.slice(0, 8)} · aria {x.aria_sha.slice(0, 8)} · shot {x.screenshot_sha.slice(0, 8)} · {x.fused.elements} elements</span></button></li>))}</ul>
+        </li>))}</ul>
+      {shot && (<div className="mt-4 rounded-xl border border-line p-3"><div className="flex items-center justify-between"><p className="text-sm font-semibold">{shot.phase} · {shot.label}</p><button className="text-xs underline" onClick={() => setShot(null)}>Close</button></div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={shot.screenshot_url} alt={`Screenshot: ${shot.label}`} className="mt-2 w-full rounded-lg border border-line" />
+        <p className="mt-1 break-all text-[11px] text-muted">{shot.url} · state fusion: URL + DOM text hash + ARIA tree hash + screenshot hash + API state hash {shot.fused.api_sha ? shot.fused.api_sha.slice(0, 10) : "n/a"}</p></div>)}
+    </section>
+  );
+}
+
+const CMD_CHIPS = ["what happened", "explain", "pause", "resume", "undo", "stop"];
+export function CommandBox({ missionId, onDone }: { missionId: string; onDone: () => void }) {
+  const [text, setText] = useState("");
+  const [log, setLog] = useState<{ you: string; reply: string; ok: boolean }[]>([]);
+  const [busy, setBusy] = useState(false);
+  const send = async (t: string) => {
+    if (!t.trim()) return;
+    setBusy(true);
+    try { const r = await api<{ message: string; ok: boolean }>(`/missions/${missionId}/utterance`, { body: { text: t } }); setLog((l) => [{ you: t, reply: r.message, ok: r.ok }, ...l].slice(0, 6)); setText(""); onDone(); }
+    catch (e) { setLog((l) => [{ you: t, reply: e instanceof ApiError ? e.message : "Failed", ok: false }, ...l]); } finally { setBusy(false); }
+  };
+  return (
+    <section className="card" aria-labelledby="cmd-h"><h2 id="cmd-h" className="text-lg font-bold">Talk to this mission</h2>
+      <p className="mt-1 text-sm text-muted">Type (or dictate) <em>stop, pause, resume, change this, undo, explain, what happened</em> — English, Hindi, Hinglish, Tamil, Telugu keywords work. Every reply states what actually happened.</p>
+      <form className="mt-3 flex flex-col gap-2 sm:flex-row" onSubmit={(e) => { e.preventDefault(); void send(text); }}><label htmlFor="cmd" className="sr-only">Command</label>
+        <input id="cmd" className="input" placeholder="e.g. actually, use the other contact — or: kya hua" value={text} onChange={(e) => setText(e.target.value)} /><button className="btn-primary" disabled={busy || !text.trim()}>Send</button></form>
+      <div className="mt-2 flex flex-wrap gap-2">{CMD_CHIPS.map((c) => <button key={c} className="badge min-h-[32px] bg-soft text-muted hover:text-ink" disabled={busy} onClick={() => void send(c)}>{c}</button>)}</div>
+      {log.length > 0 && <ul className="mt-3 space-y-2 text-sm" aria-live="polite">{log.map((l, i) => <li key={i} className="rounded-xl bg-soft p-3"><p className="text-xs text-muted">you: {l.you}</p><p className={l.ok ? "" : "text-danger"}>{l.reply}</p></li>)}</ul>}
     </section>
   );
 }

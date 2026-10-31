@@ -48,7 +48,7 @@ def run_read_tasks(db: Session, m: Mission, specs: list[dict]) -> dict[str, Miss
     tasks = {}
     for s in specs:
         st, out, att, err, ms = results[s["kind"]]
-        t = add(db, m, s["kind"], s["owner"], "read", s.get("depends_on", []), st, s.get("input", {}), {**(out if isinstance(out, dict) else {"value": out}), "elapsed_ms": round(ms, 1)}, None,
+        t = add(db, m, s["kind"], s["owner"], "read", s.get("depends_on", []), st, s.get("input", {}), {**(out if isinstance(out, dict) else {"value": out}), "elapsed_ms": round(ms, 1), "concurrent": len(specs) > 1}, None,
                 s.get("timeout_ms", 10000), s.get("retries", 1))
         t.attempts, t.error = att, err
         tasks[s["kind"]] = t

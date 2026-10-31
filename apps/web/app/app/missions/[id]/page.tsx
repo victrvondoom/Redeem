@@ -1,6 +1,6 @@
 "use client";
 import { use, useCallback, useEffect, useMemo, useState } from "react";
-import { AgentActivity, Alternatives, ControlBar, EvidenceCenter } from "@/components/MissionPanels";
+import { AgentActivity, Alternatives, BrowserPanel, CommandBox, ControlBar, EvidenceCenter, TaskGraph } from "@/components/MissionPanels";
 import { Empty, ErrorNote, StatusBadge, Tag } from "@/components/ui";
 import { api, ApiError, type LedgerEvent, type Mission, type PlanAction } from "@/lib/api";
 import { inr, TERMINAL, when } from "@/lib/format";
@@ -9,7 +9,7 @@ import { useI18n } from "@/lib/i18n";
 const STEPS = ["INTENT_CAPTURED", "CLASSIFIED", "DISCOVERING", "NEEDS_APPROVAL", "AUTHORIZED", "EXECUTING", "VERIFIED"];
 const KIND_LABEL: Record<string, string> = {
   refund_request: "Refund request to airline desk", hotel_change_request: "Date-change request to hotel desk", reserve_stock: "Reserve stock for customer",
-  calendar_update: "Correct calendar event", notify_contact: "Prepare family message (draft, not sent)", crm_followup: "Schedule CRM follow-up", prepare_case: "Prepare case record (not filed externally)",
+  calendar_update: "Correct calendar event", browser_crm_task: "Create CRM follow-up task (in the browser)", browser_send_report: "Send the report (browser · SIMULATED delivery)", notify_contact: "Prepare family message (draft, not sent)", crm_followup: "Schedule CRM follow-up", prepare_case: "Prepare case record (not filed externally)",
 };
 
 export default function MissionPage({ params }: { params: Promise<{ id: string }> }) {
@@ -86,6 +86,10 @@ export default function MissionPage({ params }: { params: Promise<{ id: string }
               <span>{c.label}</span>{c.hint && <span className="text-xs font-normal text-muted">{c.hint}</span>}</button></li>))}</ul>)}
           {cl.type === "missing_field" && cl.role && (<div className="mt-4 flex gap-2"><input type="date" className="input max-w-xs" value={dateVal} onChange={(e) => setDateVal(e.target.value)} aria-label="Date" />
             <button className="btn-primary" disabled={!dateVal || busy} onClick={() => act(() => api(`/missions/${id}/bind`, { body: { role: cl.role, value: dateVal } }))}>Use this date</button></div>)}
+          {cl.type === "case_info_needed" && cl.case_id && (<div className="mt-3 flex flex-wrap items-center gap-3"><a className="btn-primary" href={`/app/cases/${cl.case_id}`}>Open the case and answer</a>
+            <button className="btn-ghost" disabled={busy} onClick={() => act(() => api(`/missions/${id}/recheck`, { method: "POST" }))}>Re-check</button></div>)}
+          {cl.type === "user_action_required" && <p className="mt-3 rounded-xl bg-amber-soft p-4 text-sm font-medium">REDEEM never enters passwords, solves CAPTCHAs, reads one-time codes or confirms payments. Do that step yourself, then resume.</p>}
+          {cl.type === "browser_unavailable" && <p className="mt-3 rounded-xl bg-danger-soft p-4 text-sm font-medium text-danger">The browser runtime is blocked on this server, so nothing was attempted.</p>}
           {(cl.type === "scam_warning" || cl.type === "refused") && <p className="mt-3 rounded-xl bg-danger-soft p-4 text-sm font-medium text-danger">{cl.message}</p>}
           {cl.type === "unsupported_or_unclear" && <p className="mt-3 text-sm text-muted">Supported today (against local fixtures): flight/hotel/calendar recovery, shop reservations, CRM follow-ups and complaint-case preparation. Rephrase below, or cancel.</p>}
         </section>
@@ -121,19 +125,25 @@ export default function MissionPage({ params }: { params: Promise<{ id: string }
       )}
 
       <Alternatives m={m} lang={lang} />
+      <TaskGraph tasks={m.tasks ?? []} />
+      <BrowserPanel missionId={id} refreshKey={`${m.status}-${m.revision}-${events.length}`} />
 
       {m.outcome && <Receipt m={m} />}
+
+      <CommandBox missionId={id} onDone={() => void load()} />
 
       <EvidenceCenter missionId={id} refreshKey={`${m.status}-${m.revision}-${events.length}`} />
       <AgentActivity missionId={id} refreshKey={`${m.status}-${events.length}`} />
 
-      {!terminal && (m.scenario === "flight_recovery" || m.scenario === "retail_reservation") && actions.length > 0 && (
+      {!terminal && (m.scenario === "flight_recovery" || m.scenario === "retail_reservation" || m.scenario === "browser_followup") && actions.length > 0 && (
         <section className="rounded-2xl border border-dashed border-line p-5" aria-labelledby="fault-h">
           <h2 id="fault-h" className="font-bold">Demo controls <Tag tone="amber">fixture fault injection</Tag></h2>
           <p className="mt-1 text-sm text-muted">Arms a one-time failure inside the <em>local fixture provider</em> so you can watch recovery. It never touches a real service.</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button className="btn-ghost" disabled={busy} onClick={() => act(() => api(`/missions/${id}/faults`, { body: { kind: "ack_loss" } }))}>Lose the provider’s acknowledgement</button>
-            <button className="btn-ghost" disabled={busy} onClick={() => act(() => api(`/missions/${id}/faults`, { body: { kind: "silent_drop" } }))}>Provider says OK but drops it</button></div>
+            <button className="btn-ghost" disabled={busy} onClick={() => act(() => api(`/missions/${id}/faults`, { body: { kind: "silent_drop" } }))}>{m.scenario === "browser_followup" ? "The page claims success but writes nothing" : "Provider says OK but drops it"}</button>
+            {m.scenario === "browser_followup" && [["popup", "Show an unexpected pop-up"], ["layout_shift", "Rename form labels (app update)"], ["login_wall", "Sign the session out"], ["login_cleared", "I signed in myself"], ["report_edited", "Edit the report after approval"], ["contact_changed", "Change the contact's email"], ["slow_page", "Slow page"]].map(([k, l]) => (
+              <button key={k} className="btn-ghost" disabled={busy} onClick={() => act(() => api(`/missions/${id}/faults`, { body: { kind: k } }))}>{l}</button>))}</div>
         </section>
       )}
 
@@ -157,7 +167,7 @@ function summarise(e: LedgerEvent): string {
 
 function ActionRow({ a, lang, stale, checkable, checked, onCheck }: { a: PlanAction; lang: string; stale: boolean; checkable: boolean; checked: boolean; onCheck: (v: boolean) => void }) {
   const p = a.params as Record<string, string | number>;
-  const target = p.contact_name ? `To ${p.contact_name}: “${String(p.body).slice(0, 80)}…”` : p.lead_name ? `${p.lead_name} (phone ending ${p.phone_last4}) → ${p.follow_up_date}` : p.event_id ? String(p.title) : p.domain ? String(p.title) : p.booking_ref ? `${p.booking_ref}${p.passenger_name ? ` · ${p.passenger_name}` : ""}` : `${p.product_name} → ${p.customer_name}, pickup ${p.pickup_date}`;
+  const target = a.kind === "browser_send_report" ? `${p.attachment_title} → ${p.contact_name} <${p.to_addr}> · sha256 ${String(p.attachment_sha256).slice(0, 10)}…` : a.kind === "browser_crm_task" ? `${p.contact_name} <${p.contact_email}> · “${p.title}”` : p.contact_name ? `To ${p.contact_name}: “${String(p.body).slice(0, 80)}…”` : p.lead_name ? `${p.lead_name} (phone ending ${p.phone_last4}) → ${p.follow_up_date}` : p.event_id ? String(p.title) : p.domain ? String(p.title) : p.booking_ref ? `${p.booking_ref}${p.passenger_name ? ` · ${p.passenger_name}` : ""}` : `${p.product_name} → ${p.customer_name}, pickup ${p.pickup_date}`;
   return (
     <li className={`rounded-xl border border-line p-4 ${stale ? "opacity-50" : ""}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">

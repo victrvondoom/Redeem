@@ -1,117 +1,76 @@
 "use client";
 import Link from "next/link";
 import { Composer } from "@/components/Composer";
+import { Icon } from "@/components/Icons";
 import { SiteNav } from "@/components/SiteNav";
 import { Logo, Tag } from "@/components/ui";
 import { useI18n } from "@/lib/i18n";
 
-const REAL_TODAY: [string, string, "teal" | "amber" | "soft"][] = [
-  ["Flight-refund recovery mission", "Runs end-to-end against a stateful local fixture; no real airline is contacted", "teal"],
-  ["Shop reservation mission", "Runs end-to-end against a stateful local shop fixture", "teal"],
-  ["Bolna voice in the browser", "Implemented. Needs your Bolna credentials to place a live call", "amber"],
-  ["Outbound phone calls", "Implemented behind an allow-list. Disabled unless an operator enables it", "amber"],
-  ["Legal / regulatory citations", "Not shipped: no verified, dated source corpus yet", "soft"],
-  ["Other domains (billing, health, telecom…)", "Planned. Listed honestly as not built", "soft"],
+const DOMAINS: [string, string, string][] = [
+  ["Airline & travel", "Cancelled flight? Refund request, hotel and calendar fixes in one mission.", "mission"], ["Banking & payment safety", "Disputes, failed UPI payments, scam checks. Never asks for an OTP.", "shield"],
+  ["Insurance", "Claim rejection checklist, evidence mapping, escalation to the ombudsman route.", "cases"], ["Telecom", "Billing and outage complaints with TRAI-sourced passages.", "voice"],
+  ["E-commerce & retail", "Returns and refunds; a shop operator that reserves stock atomically.", "vault"], ["Housing & property", "Deposit, possession and maintenance complaints with RERA material.", "home"],
+  ["Government grievances", "Grievance and RTI preparation with the right escalation ladder.", "book"], ["Healthcare administration", "Billing and records. Never diagnoses or advises on treatment.", "plug"],
+];
+const STEPS: [string, string][] = [["Understand", "Voice or text in five languages; domains and entities extracted, asking only for what is truly missing."], ["Gather evidence", "Documents read, classified and scored; every claim you make is checked against them."],
+  ["Retrieve sources", "Passages from a knowledge base with provenance. No citation is ever invented."], ["Plan & rank", "Options ranked by benefit, time, risk and privacy. You can change the weights."],
+  ["Approve", "Your approval is bound to the exact draft, target and amount. Change anything and it is void."], ["Execute", "APIs, a real browser, or a guided handoff. Nothing runs twice."], ["Verify", "A separate step reads the real state back. A success toast proves nothing."], ["Report", "A receipt and evidence bundle with a hash chain you can download."]];
+const REAL: [string, string, "teal" | "amber" | "soft"][] = [
+  ["Eight consumer-rights case workflows", "Intake, evidence checklist, retrieval, ranking, draft, approval, handoff, tracking. Tested.", "teal"], ["Real Chromium actions", "Before/after snapshots and a temporal guard, against simulated apps on loopback.", "teal"],
+  ["Cross-domain missions with a task graph", "Refund + hotel + calendar + family draft, persisted, dependency-gated.", "teal"], ["Evidence vault & knowledge base", "1,159 passages (799 telecom + 290 e-commerce scraped by RECLAIM; ~70 authored guides). Insurance: none.", "teal"],
+  ["Bolna voice", "Implemented and contract-tested. Needs your Bolna credentials; no live call has been made.", "amber"], ["Real filing with any authority", "Not available. REDEEM prepares everything and hands off; it never claims a filing it did not make.", "soft"],
+  ["Real airline, bank or shop integrations", "Not available. Effects run on labelled local fixtures.", "soft"], ["OCR for images", "Not available here: images are stored, never given invented text.", "soft"],
 ];
 
 export default function Landing() {
   const { t } = useI18n();
-  const steps = [1, 2, 3, 4];
   return (
     <>
       <SiteNav />
       <main id="main">
         <section id="product" className="mx-auto max-w-6xl px-4 pb-10 pt-12 text-center sm:px-6 sm:pt-20">
           <p className="h-eyebrow">{t("hero.eyebrow")}</p>
-          <h1 className="mx-auto mt-3 max-w-3xl text-[2.5rem] font-extrabold leading-[1.1] tracking-tight sm:text-6xl">
-            {t("hero.title1")}<br /><span className="text-indigo">{t("hero.title2")}</span>
-          </h1>
+          <h1 className="mx-auto mt-3 max-w-3xl text-[2.5rem] font-extrabold leading-[1.1] tracking-tight sm:text-6xl">{t("hero.title1")}<br /><span className="text-indigo">{t("hero.title2")}</span></h1>
           <p className="mx-auto mt-5 max-w-2xl text-lg text-muted">{t("hero.sub")}</p>
-          <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <a href="#start" className="btn-primary w-full sm:w-auto">{t("hero.cta1")}</a>
-            <a href="#how" className="btn-ghost w-full sm:w-auto">{t("hero.cta2")}</a>
-          </div>
+          <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row"><a href="#start" className="btn-primary w-full sm:w-auto">{t("hero.cta1")}</a><a href="#how" className="btn-ghost w-full sm:w-auto">{t("hero.cta2")}</a></div>
           <p className="mt-4 text-sm font-semibold text-muted">One voice. Every domain. Verified outcomes.</p>
         </section>
-
         <div id="start" className="mx-auto max-w-6xl scroll-mt-24 px-4 sm:px-6"><Composer /></div>
 
         <section id="how" className="mx-auto max-w-6xl scroll-mt-24 px-4 py-20 sm:px-6">
-          <h2 className="text-3xl font-extrabold tracking-tight">{t("how.title")}</h2>
-          <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {steps.map((n) => (
-              <li key={n} className="card">
-                <span className="grid h-9 w-9 place-items-center rounded-full bg-indigo-soft font-extrabold text-indigo">{n}</span>
-                <h3 className="mt-4 text-lg font-bold">{t(`how.${n}`)}</h3>
-                <p className="mt-1 text-sm text-muted">{t(`how.${n}d`)}</p>
-              </li>
-            ))}
-          </ol>
+          <h2 className="text-3xl font-extrabold tracking-tight">{t("how.title")}</h2><p className="mt-2 max-w-2xl text-muted">One lifecycle for every domain. Each stage is saved, visible and resumable.</p>
+          <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{STEPS.map(([h, d], i) => (<li key={h} className="card"><span className="grid h-9 w-9 place-items-center rounded-full bg-indigo-soft font-extrabold text-indigo">{i + 1}</span><h3 className="mt-4 text-lg font-bold">{h}</h3><p className="mt-1 text-sm text-muted">{d}</p></li>))}</ol>
         </section>
 
-        <section id="solutions" className="mx-auto grid max-w-6xl scroll-mt-24 gap-4 px-4 sm:px-6 md:grid-cols-2">
-          <article className="card">
-            <Tag tone="indigo">Consumer</Tag>
-            <h3 className="mt-3 text-xl font-bold">Flight cancelled, refund missing</h3>
-            <p className="mt-2 text-muted">REDEEM identifies the booking by reference (not just a name), prepares a refund request and a linked hotel change, shows the exact amount, and verifies what the desk actually received.</p>
-          </article>
-          <article id="business" className="card scroll-mt-24">
-            <Tag tone="teal">Business</Tag>
-            <h3 className="mt-3 text-xl font-bold">Shop call to confirmed reservation</h3>
-            <p className="mt-2 text-muted">A caller wants a keyboard for Saturday. REDEEM checks live stock, picks the right customer record, reserves after approval, and reads the reservation back.</p>
-          </article>
+        <section id="solutions" className="mx-auto max-w-6xl scroll-mt-24 px-4 sm:px-6">
+          <h2 className="text-3xl font-extrabold tracking-tight">Eight domains, each with a real workflow</h2><p className="mt-2 max-w-2xl text-muted">Not cards: each has its own intake fields, evidence checklist, escalation ladder and knowledge coverage.</p>
+          <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{DOMAINS.map(([n, d, i]) => (<li key={n} className="card"><span className="grid h-10 w-10 place-items-center rounded-xl bg-teal-soft text-teal"><Icon name={i} size={20} /></span><h3 className="mt-3 font-bold">{n}</h3><p className="mt-1 text-sm text-muted">{d}</p></li>))}</ul>
+        </section>
+
+        <section id="business" className="mx-auto mt-4 grid max-w-6xl scroll-mt-24 gap-4 px-4 pt-12 sm:px-6 md:grid-cols-2">
+          <article className="card"><Tag tone="indigo">Computer & browser work</Tag><h3 className="mt-3 text-xl font-bold">“Follow up with Jordan Lee using the latest report.”</h3><p className="mt-2 text-muted">Two contacts share the name, so REDEEM refuses to guess. It picks the latest report by bytes, drives a real browser through your CRM and outbox, snapshots every step, and only sends what you approved — the exact report, to the exact person.</p></article>
+          <article className="card"><Tag tone="teal">Business</Tag><h3 className="mt-3 text-xl font-bold">Shop call to confirmed reservation</h3><p className="mt-2 text-muted">A caller wants two keyboards for tomorrow. REDEEM picks the right customer record, reserves stock atomically (no overselling under concurrency), updates the CRM and reads the reservation back.</p></article>
         </section>
 
         <section className="mx-auto mt-4 max-w-6xl px-4 sm:px-6">
-          <div className="card grid gap-6 md:grid-cols-2">
-            <div>
-              <h2 className="text-2xl font-extrabold tracking-tight">Verified means checked, not claimed</h2>
-              <p className="mt-2 text-muted">A provider saying “OK” is not proof. After every action a separate verifier reads the real state. If an acknowledgement is lost, REDEEM never blindly resends — it looks the request up first. If you change your mind mid-way, earlier approvals stop working.</p>
-            </div>
-            <ul className="space-y-2 text-sm">
-              {["Approvals are bound to the exact target, amount and revision", "Write-ahead ledger before every side effect", "Lost acknowledgement → look up, never duplicate", "Receipt with a tamper-evident ledger hash"].map((x) => (
-                <li key={x} className="flex gap-3 rounded-xl bg-soft px-4 py-3"><span aria-hidden className="text-teal">✓</span>{x}</li>))}
-            </ul>
-          </div>
+          <div className="card grid gap-6 md:grid-cols-2"><div><h2 className="text-2xl font-extrabold tracking-tight">Verified means checked, not claimed</h2>
+            <p className="mt-2 text-muted">A provider saying “OK” is not proof. Lost acknowledgement? REDEEM looks it up before it ever retries. Page says “success”? It reads the system of record. You change your mind? Earlier approvals stop working.</p></div>
+            <ul className="grid gap-2 text-sm">{[["USER PROVIDED", "what you said or approved"], ["PROVIDER CONFIRMED", "an acknowledgement, not proof"], ["DATABASE VERIFIED", "read back independently"], ["INFERRED", "REDEEM's rules, labelled as such"], ["UNVERIFIED", "stated plainly, never hidden"]].map(([k, v]) => <li key={k} className="flex flex-wrap items-center gap-2 rounded-xl bg-soft px-4 py-2.5"><Tag tone="indigo">{k}</Tag><span className="text-muted">{v}</span></li>)}</ul></div>
         </section>
 
-        <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-          <h2 className="text-2xl font-extrabold tracking-tight">Languages</h2>
-          <p className="mt-2 max-w-3xl text-muted">English, हिन्दी, Hinglish, தமிழ் and తెలుగు work in the interface and for mission text. Live voice quality per language still has to be verified against a configured Bolna agent — it is not claimed here.</p>
-        </section>
-
-        <section id="security" className="mx-auto max-w-6xl scroll-mt-24 px-4 sm:px-6">
-          <div className="card">
-            <h2 className="text-2xl font-extrabold tracking-tight">Permission and privacy controls</h2>
-            <ul className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-              {["Nothing consequential runs without your approval", "Calls need explicit consent; recording is a separate opt-in", "Your API keys never reach the browser", "Per-workspace isolation, export and delete controls", "Callers are told they're speaking with an AI", "Revoke any connection at any time"].map((x) => (
-                <li key={x} className="flex gap-3"><span aria-hidden className="text-teal">✓</span>{x}</li>))}
-            </ul>
-          </div>
+        <section id="security" className="mx-auto mt-4 max-w-6xl scroll-mt-24 px-4 sm:px-6">
+          <div className="card"><h2 className="text-2xl font-extrabold tracking-tight">Permission and privacy controls</h2>
+            <ul className="mt-4 grid gap-3 text-sm sm:grid-cols-2">{["Nothing consequential runs without an approval bound to its exact target and amount", "Passwords, CAPTCHAs, one-time codes and payments are always yours; REDEEM pauses", "Every document and workspace is private to you; export or delete everything", "Callers are told they're speaking with an AI; recording is a separate opt-in", "Web pages and documents are data, never instructions", "Revoke any connection and its actions stop immediately"].map((x) => (<li key={x} className="flex gap-3"><span aria-hidden className="text-teal"><Icon name="check" size={16} /></span>{x}</li>))}</ul></div>
         </section>
 
         <section id="developers" className="mx-auto max-w-6xl scroll-mt-24 px-4 py-16 sm:px-6">
-          <h2 className="text-2xl font-extrabold tracking-tight">What is real today</h2>
-          <p className="mt-2 text-muted">We list what works and what does not. No customer numbers or success rates are claimed because there are none yet.</p>
-          <ul className="mt-6 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
-            {REAL_TODAY.map(([name, note, tone]) => (
-              <li key={name} className="flex flex-col gap-1 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-                <div><p className="font-semibold">{name}</p><p className="text-sm text-muted">{note}</p></div>
-                <Tag tone={tone}>{tone === "teal" ? "Works (fixture)" : tone === "amber" ? "Needs credentials" : "Not built"}</Tag>
-              </li>))}
-          </ul>
+          <h2 className="text-2xl font-extrabold tracking-tight">What is real today</h2><p className="mt-2 text-muted">We list what works and what does not. There are no customer numbers or success rates because there are no customers yet.</p>
+          <ul className="mt-6 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">{REAL.map(([name, note, tone]) => (<li key={name} className="flex flex-col gap-1 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold">{name}</p><p className="text-sm text-muted">{note}</p></div><Tag tone={tone}>{tone === "teal" ? "Works (fixtures)" : tone === "amber" ? "Needs credentials" : "Not available"}</Tag></li>))}</ul>
         </section>
 
-        <section className="bg-deep px-4 py-16 text-center text-white sm:px-6">
-          <h2 className="text-3xl font-extrabold tracking-tight">{t("hero.title1")} {t("hero.title2")}</h2>
-          <Link href="/register" className="btn mt-6 bg-white text-deep hover:bg-soft">{t("nav.start")}</Link>
-        </section>
+        <section className="bg-deep px-4 py-16 text-center text-white sm:px-6"><h2 className="text-3xl font-extrabold tracking-tight">{t("hero.title1")} {t("hero.title2")}</h2><Link href="/register" className="btn mt-6 bg-white text-deep hover:bg-soft">{t("nav.start")}</Link></section>
       </main>
-      <footer className="border-t border-line px-4 py-8 text-sm text-muted sm:px-6">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
-          <Logo /><p>Built for the Bolna × YC Symphony Buildathon 2026. Not endorsed by Bolna or Y Combinator.</p>
-        </div>
-      </footer>
+      <footer className="border-t border-line px-4 py-8 text-sm text-muted sm:px-6"><div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3"><Logo /><p>Built for the Bolna × YC Symphony Buildathon 2026. Not endorsed by Bolna or Y Combinator. Includes MIT-licensed code and data from RESOLVE and RECLAIM.</p></div></footer>
     </>
   );
 }

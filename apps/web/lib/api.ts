@@ -28,7 +28,7 @@ export type Me = { id: string; email: string; name: string; language: Lang; csrf
 export type Lang = "en" | "hi" | "hinglish" | "ta" | "te";
 
 export type Candidate = { id: string; label: string; hint?: string };
-export type Clarification = { type: string; role?: string; message: string; candidates?: Candidate[]; transcript?: string };
+export type Clarification = { case_id?: string; reason?: string; type: string; role?: string; message: string; candidates?: Candidate[]; transcript?: string };
 export type PlanAction = {
   id: string; kind: string; params: Record<string, unknown>; amount_paise: number | null; risk: string;
   status: string; digest: string; revision: number; depends_on?: string[];
@@ -37,7 +37,7 @@ export type Mission = {
   id: string; status: string; intent: string; revision: number; scenario: string; domains: string[];
   language_selected: Lang; language_detected: string; source: string; bindings: Record<string, string>;
   clarification: Clarification | null; created_at: string; updated_at: string;
-  paused?: boolean; escalated?: boolean;
+  paused?: boolean; escalated?: boolean; tasks?: import("@/components/viz").TaskNode[];
   plan: { summary?: string; graph?: { id: string; kind: string; depends_on: string[] }[]; reads?: { alternatives?: { flight: string; route: string; departs: string; price_paise: number; seats: number; bookable: boolean }[] }; actions?: PlanAction[]; blocked?: { kind: string; reason: string; detail: string }[];
           notes?: string[]; policy_citations?: { id: string; title: string; source: string; effective_date: string; jurisdiction: string; is_fixture: boolean }[] };
   outcome: null | {

@@ -50,7 +50,8 @@ test("quality lab shows benchmark with scope and ablations", async ({ page }) =>
 test("domain explorer is generated from the registry and shows the browser gate", async ({ page }) => {
   await register(page);
   await page.getByRole("link", { name: "Domains" }).click();
-  await expect(page.getByText("Cloud browser: BLOCKED")).toBeVisible();
+  await page.getByRole("tab", { name: /Mission domains/ }).click();
+  await expect(page.getByText(/Real-web browser: BLOCKED/)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Sales & CRM" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Telecom" })).toBeVisible();
 });
@@ -70,7 +71,7 @@ test("no overflow on authenticated pages in long-translation languages", async (
   test.setTimeout(300_000);
   await register(page);
   for (const lang of ["ta", "te", "hi"]) {
-    await page.getByLabel("Language").first().selectOption(lang);
+    await page.locator('select[aria-label="Language"]:visible').first().selectOption(lang);
     for (const w of [1024, 768, 390, 360]) {
       await page.setViewportSize({ width: w, height: 900 });
       for (const path of ["/app", "/app/workflows", "/app/domains", "/app/quality", "/app/voice", "/app/vault", "/app/connections", "/app/settings", "/app/history"]) {

@@ -575,3 +575,17 @@ class MissionTask(Base):
     started_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+
+class BenchmarkRun(Base):
+    __tablename__ = "benchmark_runs"
+    id: Mapped[str] = _id("bmk")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    seed: Mapped[int] = mapped_column(Integer)
+    trials_per_cell: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(12), default="RUNNING")  # RUNNING | DONE | FAILED
+    summary: Mapped[dict] = mapped_column(JSON, default=dict)
+    raw_path: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    duration_seconds: Mapped[float | None] = mapped_column(nullable=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    started_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)

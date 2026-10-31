@@ -5,8 +5,8 @@ Deterministic code owns permissions, identity, money, transitions and idempotenc
 trusts a provider's own acknowledgement as proof of an outcome.
 """
 import re
+import time
 from datetime import datetime, timedelta, timezone
-from concurrent.futures import ThreadPoolExecutor
 from typing import Callable
 
 from sqlalchemy import select
@@ -385,28 +385,29 @@ def _action_view(a: Action) -> dict:
             "risk": a.risk, "status": a.status, "digest": a.digest, "revision": a.revision, "position": a.position}
 
 
-def run_reads(tenant_id: str, booking_id: str | None) -> dict:
-    """Independent read-only tasks run concurrently (separate sessions); writes are never parallelised."""
-    import time
-
+def run_reads(db: Session, m: Mission, tenant_id: str, booking_id: str | None) -> dict:
+    """Independent read-only tasks run concurrently through the task runtime (per-task timeout + retry budget, outputs persisted); writes are never parallelised."""
     def alternatives():
         with SessionLocal() as s:
-            return [{"flight": o.flight_no, "route": o.route, "departs": o.departs, "price_paise": o.price_paise, "seats": o.seats,
-                     "bookable": o.seats > 0} for o in s.scalars(select(FxFlightOption).where(FxFlightOption.tenant_id == tenant_id))]
+            return {"value": [{"flight": o.flight_no, "route": o.route, "departs": o.departs, "price_paise": o.price_paise, "seats": o.seats, "bookable": o.seats > 0}
+                              for o in s.scalars(select(FxFlightOption).where(FxFlightOption.tenant_id == tenant_id))]}
 
     def policy():
-        return [{"id": d["id"], "title": d["title"], "is_fixture": True} for d in POLICY_DOCS]
+        return {"value": [{"id": d["id"], "title": d["title"], "is_fixture": True} for d in POLICY_DOCS]}
 
     def calendar():
         with SessionLocal() as s:
             ev = CalendarConnector(s, tenant_id).for_booking(booking_id) if booking_id else None
-            return {"event_id": ev.id, "status": ev.status} if ev else None
+            return {"value": {"event_id": ev.id, "status": ev.status} if ev else None}
 
     t0 = time.perf_counter()
-    with ThreadPoolExecutor(3) as ex:
-        futs = {"alternatives": ex.submit(alternatives), "policy": ex.submit(policy), "calendar": ex.submit(calendar)}
-        results = {k: f.result() for k, f in futs.items()}
-    return {"tasks": list(futs), "results": results, "wall_ms": round((time.perf_counter() - t0) * 1000, 2)}
+    tasks = taskgraph.run_read_tasks(db, m, [
+        {"kind": "read:alternatives", "owner": "specialist", "fn": alternatives, "timeout_ms": 8000, "retries": 1},
+        {"kind": "read:policy", "owner": "evidence", "fn": policy, "timeout_ms": 2000, "retries": 0},
+        {"kind": "read:calendar", "owner": "observer", "fn": calendar, "timeout_ms": 5000, "retries": 1}])
+    wall = round((time.perf_counter() - t0) * 1000, 2)
+    results = {k.split(":", 1)[1]: t.output.get("value") for k, t in tasks.items()}
+    return {"tasks": [k.split(":", 1)[1] for k in tasks], "results": results, "wall_ms": wall, "task_rows": tasks}
 
 
 def _drop_completed(db: Session, m: Mission, actions: list[Action], notes: list[str]) -> list[Action]:
@@ -558,13 +559,10 @@ def build_plan(db: Session, m: Mission) -> None:
     actions = _drop_completed(db, m, actions, notes)
     for a in actions:
         emit(db, m, "POLICY", safety.evaluate_action(a.kind, a.params, a.risk).as_dict(), a.id)
-    reads = run_reads(t, m.bindings.get("booking_id")) if m.scenario == "flight_recovery" else {}
+    reads = run_reads(db, m, t, m.bindings.get("booking_id")) if m.scenario == "flight_recovery" else {}
     if reads:
         emit(db, m, "READS_COMPLETED", {"concurrent": True, "tasks": list(reads["tasks"]), "wall_ms": reads["wall_ms"]})
-    read_tasks = {}
-    owners = {"alternatives": "specialist", "policy": "evidence", "calendar": "observer"}
-    for k, v in (reads.get("results", {}) if reads else {}).items():
-        read_tasks[k] = taskgraph.add(db, m, f"read:{k}", owners.get(k, "observer"), status="DONE", output={"items": len(v) if isinstance(v, (list, dict)) else int(bool(v)), "wall_ms": reads["wall_ms"], "concurrent": True})
+    read_tasks = dict(reads.get("task_rows", {})) if reads else {}
     if m.scenario == "browser_followup" and m.bindings.get("_obs"):
         o = m.bindings["_obs"]
         read_tasks["observe_browser"] = taskgraph.add(db, m, "observe:browser_dom", "observer", status="DONE", output={"contacts": o["contacts"], "reports": o["reports"], "snapshots": o["snapshots"]})

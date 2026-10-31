@@ -1,22 +1,35 @@
 "use client";
 import { useEffect, useState } from "react";
 import { ErrorNote, PageTitle, Tag } from "@/components/ui";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
+import { when } from "@/lib/format";
 
 type Row = { n: number; correct_outcome: number; verified_outcome: number; wrong_target: number; duplicate: number; false_success: number; unauthorized_execution: number };
 type Bench = { generated_at: string; seed: number; trials_per_cell: number; scope: string; caveat: string; ablations?: string; summary: Record<string, { TOTAL: Row }> };
+type Run = { id: string; seed: number; trials_per_cell: number; status: string; duration_seconds: number | null; error: string | null; started_at: string; summary: Record<string, { TOTAL: Row }>; mode: string };
 type Q = { benchmark: Bench | null; fixture_results: Record<string, unknown> & { label: string; language_breakdown: Record<string, { missions: number; verified: number }>; missions_by_status: Record<string, number> };
   live_provider_results: Record<string, unknown> & { label: string; note: string } };
 const show = (v: unknown) => (v === null || v === undefined ? "Not measured" : typeof v === "object" ? (Object.keys(v as object).length ? JSON.stringify(v) : "None yet") : String(v));
 
 export default function Quality() {
   const [q, setQ] = useState<Q | null>(null); const [error, setError] = useState<string | null>(null);
-  useEffect(() => { api<Q>("/quality").then(setQ).catch((e) => setError(e.message)); }, []);
+  const [runs, setRuns] = useState<Run[]>([]); const [running, setRunning] = useState(false); const [seed, setSeed] = useState(7); const [n, setN] = useState(3);
+  useEffect(() => { api<Q>("/quality").then(setQ).catch((e) => setError(e.message)); api<{ items: Run[] }>("/quality/runs").then((r) => setRuns(r.items)).catch(() => undefined); }, []);
+  const runBench = async () => { setRunning(true); setError(null); try { const r = await api<Run>("/quality/runs", { body: { seed, n } }); setRuns((x) => [r, ...x]); } catch (e) { setError(e instanceof ApiError ? e.message : "Run failed"); } finally { setRunning(false); } };
   const rows = (o: Record<string, unknown>, skip: string[]) => Object.entries(o).filter(([k]) => !skip.includes(k));
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <PageTitle title="Quality Lab" sub="Computed from this workspace’s real events. Anything REDEEM cannot measure says so." />
       <ErrorNote error={error} />
+      <section className="card" aria-labelledby="run-h"><h2 id="run-h" className="text-lg font-bold">Run a deterministic benchmark</h2>
+        <p className="mt-1 text-sm text-muted">Runs 7 fault scenarios × your seed count × 6 policies in a separate process and database, then stores the raw trials. Same seed, same result. Fixture-only.</p>
+        <div className="mt-3 flex flex-wrap items-end gap-3"><div><label className="label" htmlFor="sd">Seed</label><input id="sd" type="number" min={0} className="input w-28" value={seed} onChange={(e) => setSeed(Number(e.target.value))} /></div>
+          <div><label className="label" htmlFor="nn">Trials per cell</label><input id="nn" type="number" min={1} max={10} className="input w-28" value={n} onChange={(e) => setN(Number(e.target.value))} /></div>
+          <button className="btn-primary" disabled={running} onClick={() => void runBench()}>{running ? "Running… (up to a minute)" : "Run benchmark"}</button></div>
+        {runs.length > 0 && <div className="mt-4 overflow-x-auto"><table className="w-full min-w-[640px] text-sm"><thead><tr className="border-b border-line text-left text-muted"><th className="py-2 pr-3">Run</th><th className="pr-3">Seed × n</th><th className="pr-3">Took</th><th className="pr-3">REDEEM correct</th><th className="pr-3">Naive correct</th><th className="pr-3">Naive false success</th><th>Raw</th></tr></thead>
+          <tbody>{runs.map((r) => (<tr key={r.id} className="border-b border-line"><td className="py-2 pr-3"><code className="text-xs">{r.id}</code><br /><span className="text-xs text-muted">{when(r.started_at)}</span></td><td className="pr-3">{r.seed} × {r.trials_per_cell}</td><td className="pr-3">{r.duration_seconds}s</td>
+            <td className="pr-3">{r.status === "DONE" ? `${r.summary.C_redeem.TOTAL.correct_outcome}/${r.summary.C_redeem.TOTAL.n}` : r.status.toLowerCase()}</td><td className="pr-3">{r.status === "DONE" ? `${r.summary.A_naive.TOTAL.correct_outcome}/${r.summary.A_naive.TOTAL.n}` : "—"}</td><td className="pr-3">{r.status === "DONE" ? `${r.summary.A_naive.TOTAL.false_success}/${r.summary.A_naive.TOTAL.n}` : "—"}</td>
+            <td>{r.status === "DONE" ? <a className="font-semibold text-indigo underline" href={`/api/v1/quality/runs/${r.id}/raw`}>JSON</a> : <span className="text-danger text-xs">{r.error}</span>}</td></tr>))}</tbody></table></div>}</section>
       {q && (<>
         {q.benchmark && (<section className="card" aria-labelledby="bm-h"><div className="flex flex-wrap items-center gap-2"><h2 id="bm-h" className="text-lg font-bold">Policy benchmark &amp; ablations</h2><Tag tone="indigo">Local fixtures</Tag></div>
           <p className="mt-1 text-sm text-muted">Seed {q.benchmark.seed} · {q.benchmark.trials_per_cell} trials per scenario per policy · generated {q.benchmark.generated_at.slice(0, 10)}. {q.benchmark.scope}.</p>

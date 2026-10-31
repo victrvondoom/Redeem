@@ -176,7 +176,7 @@ def summarise(trials):
     return out
 
 
-def main(n=30, seed=7, write=True):
+def main(n=30, seed=7, write=True, out=None):
     Base.metadata.drop_all(db_engine); Base.metadata.create_all(db_engine)
     rng = random.Random(seed)
     trials = [run_trial(p, s, rng, i) for s in SCENARIOS for p in POLICIES for i in range(n)]
@@ -184,14 +184,16 @@ def main(n=30, seed=7, write=True):
               "ablations": "C_minus_* disable one control (approval digest / independent verifier / reconciliation) via an eval-only switch. Not run: entity-binding, temporal-guard and causal-ledger ablations.",
               "caveat": "Policies A/B are our own reference executors modelling stated capabilities; results do not generalise to other products or to live providers.",
               "summary": summarise(trials), "raw_trials": trials}
-    if write:
+    if out:
+        Path(out).write_text(json.dumps(result, indent=1))
+    elif write:
         path = ROOT / "evals" / "reports" / "benchmark_results.json"
         path.write_text(json.dumps(result, indent=1)); print(f"wrote {path}")
     return result
 
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(); ap.add_argument("--n", type=int, default=30); ap.add_argument("--seed", type=int, default=7)
+    ap = argparse.ArgumentParser(); ap.add_argument("--n", type=int, default=30); ap.add_argument("--seed", type=int, default=7); ap.add_argument("--out", default=None)
     r = main(**vars(ap.parse_args()))
     for p, rows in r["summary"].items():
         t = rows["TOTAL"]
