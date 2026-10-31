@@ -23,7 +23,7 @@ Status words: **Verified** = observed working through its real execution path in
 | LLM processing, local speech-to-text | none | none | none | needs key / model download | none | Not done |
 | Other connectors (booking, bank, insurance, telecom, government, healthcare portals) | cards | none | none | no adapters | none | Not done |
 | OAuth for other providers, webhooks beyond Bolna | none | none | none | n/a | none | Not done |
-| Cinematic intro (Bolna and Wispr Flow cubes) | Landing | n/a | n/a | n/a | E2E checks both logo images | **Verified**: official logo files downloaded unmodified from bolna.ai and wisprflow.ai (CSS 3D, not WebGL) |
+| Cinematic intro (Bolna and Y Combinator cubes) | Landing | n/a | n/a | n/a | E2E checks both logo images | **Verified**: official logo files downloaded unmodified from bolna.ai and the project owner (CSS 3D, not WebGL) |
 | WebGL / real-time 3D | none | n/a | n/a | n/a | none | Not done (CSS 3D only) |
 
 ## What this pass could not do, and why

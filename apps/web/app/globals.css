@@ -61,7 +61,7 @@ html[data-go] .rise { animation-play-state: running; }
 @keyframes ticker-in { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: none; } }
 .ticker-in { animation: ticker-in .3s ease both; }
 
-/* ---------- identity intro: Bolna and Wispr Flow cubes collide into REDEEM ---------- */
+/* ---------- identity intro: Bolna and Y Combinator cubes collide into REDEEM ---------- */
 .intro-stage { position: fixed; inset: 0; z-index: 90; background: rgb(var(--deep)); overflow: hidden; animation: pullback .9s cubic-bezier(.65,0,.2,1) 3.9s forwards; transform-origin: 50% 46%; }
 @keyframes pullback { to { transform: scale(2.4); opacity: 0; } }
 .intro-vignette { position: absolute; inset: 0; background: repeating-radial-gradient(circle at 92% -6%, rgb(var(--green) / .22) 0 2px, rgb(var(--green-deep) / .12) 2px 30px, transparent 30px 58px), radial-gradient(ellipse at center, transparent 40%, rgb(var(--shadow-ink) / .85)); }

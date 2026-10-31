@@ -28,6 +28,12 @@ function Form({ mode }: { mode: "login" | "register" }) {
     } catch (err) { setError(err instanceof ApiError ? err.message : "Something went wrong."); setBusy(false); }
   };
 
+  const demo = async () => {
+    setBusy(true); setError(null);
+    try { await api("/auth/demo", { method: "POST" }); await refresh(); router.push("/app"); }
+    catch (err) { setError(err instanceof ApiError ? err.message : "Could not start the demo."); setBusy(false); }
+  };
+
   return (
     <main id="main" className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-10">
       <div className="mb-6 flex items-center justify-between"><Link href="/"><Logo /></Link><LangSwitcher /></div>
@@ -40,6 +46,7 @@ function Form({ mode }: { mode: "login" | "register" }) {
           {mode === "register" && <p className="mt-1 text-xs text-muted">At least 10 characters.</p>}</div>
         <ErrorNote error={error} />
         <button className="btn-primary w-full" disabled={busy}>{mode === "register" ? "Create account" : "Sign in"}</button>
+        <button type="button" className="btn w-full" onClick={() => void demo()} disabled={busy} data-testid="demo-signin">Demo sign in (practice data, no account needed)</button>
         <p className="text-center text-sm text-muted">{mode === "register" ? <>Have an account? <Link className="font-semibold text-indigo" href={`/login${next ? `?next=${encodeURIComponent(next)}` : ""}`}>Sign in</Link></> : <>New here? <Link className="font-semibold text-indigo" href="/register">Create an account</Link></>}</p>
       </form>
     </main>

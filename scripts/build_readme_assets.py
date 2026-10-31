@@ -55,12 +55,12 @@ def banner():
     s.append(f'<text x="70" y="170" fill="#ffffff" font-family="Manrope,Arial,sans-serif" font-size="96" font-weight="800" letter-spacing="-3">RE<tspan fill="{ACC}">DEEM</tspan></text>')
     s.append('<text x="74" y="222" fill="#f0ece8" font-family="Manrope,Arial,sans-serif" font-size="30" font-weight="700">Speak your need. We take the lead.</text>')
     s.append('<text x="74" y="256" fill="#a59c94" font-family="Manrope,Arial,sans-serif" font-size="17">Voice-first outcome missions · approval-bound · independently verified</text>')
-    for j, (name, sub) in enumerate([("Bolna", "Voice provider (link below)"), ("Wispr Flow", "Voice dictation partner")]):
+    for j, (name, sub) in enumerate([("Bolna", "Voice provider (link below)"), ("Y Combinator", "Buildathon organiser")]):
         x = 74 + j * 260
         s.append(f'<rect x="{x}" y="300" width="244" height="64" rx="14" fill="#161312" stroke="#3a3330"/>')
         s.append(cube(x + 40, 314, 22, 22, 14, top="#ffc593", left="#d9560a", right="#7a2e05", k=0.9))
         s.append(f'<text x="{x + 66}" y="327" fill="#ffffff" font-family="Manrope,Arial,sans-serif" font-size="17" font-weight="800">{name}</text><text x="{x + 66}" y="347" fill="#a59c94" font-family="Manrope,Arial,sans-serif" font-size="11">{sub}</text>')
-    s.append('<text x="74" y="404" fill="#7a716a" font-family="Manrope,Arial,sans-serif" font-size="11">Name tiles only; official logos are linked below, not redrawn. Not endorsed by Bolna, Wispr Flow, Y Combinator or WeMakeDevs.</text></svg>')
+    s.append('<text x="74" y="404" fill="#7a716a" font-family="Manrope,Arial,sans-serif" font-size="11">Name tiles only; official logos are linked below, not redrawn. Not endorsed by Bolna, Y Combinator or WeMakeDevs.</text></svg>')
     (OUT / "banner.svg").write_text("\n".join(s))
 
 

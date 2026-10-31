@@ -14,7 +14,7 @@
 
 <br/><br/>
 
-<img src="docs/media/intro.gif" alt="REDEEM intro: the Bolna and Wispr Flow cubes arrive from left and right, meet, and the REDEEM name and orange tagline appear" width="80%"/>
+<img src="docs/media/intro.gif" alt="REDEEM intro: the Bolna and Y Combinator cubes arrive from left and right, meet, and the REDEEM name and orange tagline appear" width="80%"/>
 
 <sub>The real intro of the app, recorded from the running UI (the app's <b>Replay intro</b> button plays it again).</sub>
 
@@ -187,8 +187,8 @@ REDEEM **never files anything for you.** It prepares, explains and guides. An ou
 | Envelope encryption (AES-256-GCM): wrapped per-workspace keys, versions, DEK + KEK rotation, fail-closed in production | ✅ verified | tests/test_memory.py, tests/test_encryption.py | REDEEM |
 | KMS integration / end-to-end encryption | ⬜ not done | KEK comes from environment; server can decrypt | REDEEM |
 | PostgreSQL 16 support | ✅ verified | migrations 0001-0007, alembic check, full suite on Postgres 16 (run locally; Docker build untested) | REDEEM |
-| REDEEM identity intro (3D cubes from left/right, orange tagline), skip/replay/reduced-motion | 🟠 partial | apps/web/tests/memory.spec.ts, skills_projects.spec.ts; Bolna and Wispr Flow cubes show the official logo files | REDEEM |
-| Official Bolna / Wispr Flow / YC / WeMakeDevs logo artwork | 🟠 partial | Bolna and Wispr Flow official files embedded unmodified (apps/web/public/brand); Y Combinator and WeMakeDevs SVGs absent | REDEEM |
+| REDEEM identity intro (3D cubes from left/right, orange tagline), skip/replay/reduced-motion | 🟠 partial | apps/web/tests/memory.spec.ts, skills_projects.spec.ts; Bolna and Y Combinator cubes show the official logo files | REDEEM |
+| Official Bolna / YC / WeMakeDevs logo artwork | 🟠 partial | Bolna and Y Combinator official files embedded unmodified (apps/web/public/brand); WeMakeDevs artwork absent | REDEEM |
 | Recorded browser skills (record by doing, parameterise, replay live with pause/resume/stop) | ✅ verified | apps/api/app/resolve/skills.py, tests/test_skills_projects.py, e2e skills_projects.spec.ts; runs on the local practice apps only; repair/edit of saved steps not built | RESOLVE |
 | WebGL / three.js scenes | ⬜ not done | CSS 3D + canvas only | REDEEM |
 | Context memory: per-user conversation turns (encrypted), short follow-ups inherit the previous request's entities | ✅ verified | tests/test_context.py, apps/web/tests/context.spec.ts | REDEEM |

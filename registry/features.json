@@ -75,14 +75,14 @@
    "id": "intro",
    "name": "REDEEM identity intro (3D cubes from left/right, orange tagline), skip/replay/reduced-motion",
    "status": "partial",
-   "evidence": "apps/web/tests/memory.spec.ts, skills_projects.spec.ts; Bolna and Wispr Flow cubes show the official logo files",
+   "evidence": "apps/web/tests/memory.spec.ts, skills_projects.spec.ts; Bolna and Y Combinator cubes show the official logo files",
    "source": "REDEEM"
   },
   {
    "id": "brand-logos",
-   "name": "Official Bolna / Wispr Flow / YC / WeMakeDevs logo artwork",
+   "name": "Official Bolna / YC / WeMakeDevs logo artwork",
    "status": "partial",
-   "evidence": "Bolna and Wispr Flow official files embedded unmodified (apps/web/public/brand); Y Combinator and WeMakeDevs SVGs absent",
+   "evidence": "Bolna and Y Combinator official files embedded unmodified (apps/web/public/brand); WeMakeDevs artwork absent",
    "source": "REDEEM"
   },
   {
