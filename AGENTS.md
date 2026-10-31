@@ -26,4 +26,4 @@ python evals/runners/benchmark.py --n 30 --seed 7                   # benchmark 
 python scripts/build_knowledge_corpus.py /path/to/RECLAIM           # rebuild the corpus (reads data only)
 ```
 ## Honest limits (do not paper over)
-No live Bolna call, no LLM, no OCR engine, no real filing/email/airline/bank, no isolated production browser, Postgres/Docker untested, execution synchronous. See docs/OPEN_BLOCKERS.md and docs/MANUAL_ACTIONS_LATER.md.
+No live Bolna call, no LLM, no OCR engine, no real filing/email/airline/bank, no isolated production browser, Docker build untested (Postgres 16 verified locally), execution synchronous. See docs/OPEN_BLOCKERS.md and docs/MANUAL_ACTIONS_LATER.md.

@@ -1,18 +1,22 @@
-# UNTESTED in the build sandbox (no Docker daemon). Postgres path is also unverified.
+# The Postgres path is verified locally (migrations + full backend suite on Postgres 16, not through Docker).
+# The Docker build itself is still untested in the build sandbox (no Docker daemon).
 services:
   db:
     image: postgres:16
-    environment: { POSTGRES_PASSWORD: redeem, POSTGRES_DB: redeem }
+    environment: { POSTGRES_PASSWORD: redeem, POSTGRES_DB: redeem, POSTGRES_INITDB_ARGS: "--encoding=UTF8" }
     volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U postgres -d redeem"], interval: 3s, timeout: 3s, retries: 20 }
   api:
     build: ./apps/api
     env_file: [{ path: .env, required: false }]
     environment:
       REDEEM_DATABASE_URL: postgresql+psycopg://postgres:redeem@db:5432/redeem
-    depends_on: [db]
+      REDEEM_DATA_DIR: /srv/data
+    volumes: [apidata:/srv/data]
+    depends_on: { db: { condition: service_healthy } }
     ports: ["8000:8000"]
   web:
     build: { context: ./apps/web, args: { REDEEM_API_URL: "http://api:8000" } }
     depends_on: [api]
     ports: ["3000:3000"]
-volumes: { pgdata: {} }
+volumes: { pgdata: {}, apidata: {} }

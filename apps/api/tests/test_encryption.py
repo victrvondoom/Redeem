@@ -53,3 +53,10 @@ def test_public_stats_are_aggregate_only_and_unauthenticated(api):
     j = r.json()
     assert {"verified_claims", "ledger_events", "missions", "knowledge_passages"} <= set(j)
     assert "email" not in r.text and "tenant" not in r.text.replace("this deployment only", "")
+
+
+def test_health_reports_database_dialect(api):
+    from fastapi.testclient import TestClient
+    from app.main import app
+    j = TestClient(app).get(f"{B}/health").json()
+    assert j["db"] == "ok" and j["dialect"] in ("sqlite", "postgresql")

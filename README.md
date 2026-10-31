@@ -91,8 +91,17 @@ Fresh Chromium context per run, request allow-list, before/after snapshots (DOM/
 <details>
 <summary><b>Database</b></summary>
 
-SQLAlchemy 2 + Alembic migrations 0001–0006 (`alembic check` is a test). SQLite by default; Postgres is configured through `REDEEM_DATABASE_URL` but **untested**.
+SQLAlchemy 2 + Alembic migrations 0001–0006 (`alembic check` is a test). **SQLite** is the zero-setup default; **PostgreSQL 16** is supported and verified: migrations apply cleanly, `alembic check` reports no drift, and the full backend suite (199 tests) passes against a real Postgres 16 server (run locally, not through Docker; the database must be UTF8).
+
+```bash
+scripts/dev_postgres.sh start        # throwaway Postgres on :5433, no Docker
+export REDEEM_DATABASE_URL=postgresql+psycopg://postgres@127.0.0.1:5433/redeem
+(cd apps/api && alembic upgrade head && python -m pytest -q)
+```
+
+`docker compose up` wires Postgres with a healthcheck and a data volume, but the Docker build itself is untested. `GET /api/v1/health` reports the active `dialect`. Set `REDEEM_MASTER_KEY` in production (documents are encrypted at rest).
 </details>
+
 
 ## Run it
 
@@ -118,7 +127,7 @@ Screenshots/GIFs are regenerated from the running app (Playwright screenshots �
 <details>
 <summary><b>Honest limits</b></summary>
 
-No live Bolna call has been made (without credentials the UI shows `PROVIDER_NOT_CONFIGURED`); no LLM; no OCR engine; no real filing, email, airline or bank; no production browser isolation; Postgres/Docker untested; execution is synchronous; the landing-page "simulation loop" is illustrative and labelled as such. Details: [`docs/OPEN_BLOCKERS.md`](docs/OPEN_BLOCKERS.md), [`docs/MANUAL_ACTIONS_LATER.md`](docs/MANUAL_ACTIONS_LATER.md), [`docs/IMPLEMENTATION_EVIDENCE.md`](docs/IMPLEMENTATION_EVIDENCE.md).
+No live Bolna call has been made (without credentials the UI shows `PROVIDER_NOT_CONFIGURED`); no LLM; no OCR engine; no real filing, email, airline or bank; no production browser isolation; Docker build untested (Postgres itself is verified); execution is synchronous; the landing-page "simulation loop" is illustrative and labelled as such. Details: [`docs/OPEN_BLOCKERS.md`](docs/OPEN_BLOCKERS.md), [`docs/MANUAL_ACTIONS_LATER.md`](docs/MANUAL_ACTIONS_LATER.md), [`docs/IMPLEMENTATION_EVIDENCE.md`](docs/IMPLEMENTATION_EVIDENCE.md).
 </details>
 
 <details>

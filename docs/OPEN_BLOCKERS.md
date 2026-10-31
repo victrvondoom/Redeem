@@ -1,7 +1,7 @@
 # Open blockers
 1. No Bolna credentials → every live-voice claim is UNVERIFIED. `POST /call` and `GET /executions/{id}` shapes unverified (docs host unreachable).
 2. No Docker daemon → images never built; `docker compose config` parses.
-3. Postgres never exercised (see MANUAL_ACTIONS_LATER M5).
+3. Postgres 16 verified locally (migrations, no drift, full backend suite 199 passed); the Docker build/compose path is still untested (MANUAL_ACTIONS_LATER M5).
 4. No verified official regulatory corpus → no real legal citation can be produced.
 5. No isolated browser runtime → cloud browser/computer-use is BLOCKED by design.
 6. No LLM wired: routing/planning are deterministic rules.

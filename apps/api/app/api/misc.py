@@ -33,7 +33,7 @@ MAX_UPLOAD = 5_000_000
 @router.get("/health")
 def health(db=Depends(get_db)):
     db.execute(text("SELECT 1"))
-    return {"status": "ok", "db": "ok", "time": utcnow().isoformat()}
+    return {"status": "ok", "db": "ok", "dialect": db.get_bind().dialect.name, "time": utcnow().isoformat()}
 
 
 @router.get("/public/stats")
