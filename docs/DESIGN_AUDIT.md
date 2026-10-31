@@ -20,3 +20,6 @@ The concentric green arcs from the Buildathon artwork (a decorative radial motif
 
 ## Not done
 Spacing tokens (`--space-*`), a `design.md` lock, a full app-screen recomposition, and the Hallmark hero/finish reviews (they need its scripts and a subagent).
+
+## Buildathon context (added)
+The landing page and README now state that REDEEM is a prototype built for the Y Combinator × Symphony Buildathon with Bolna, 15 Oct to 20 Nov 2026, using the Y Combinator logo and Bolna image supplied by the project owner (`apps/web/public/brand/`). Dates come from the event banner. A web search did not confirm the event details (it surfaced only a "Symphony by Bolna" Voice AI summit on 20 Nov, unverified), and "YC25" was not used because the banner says 2026; correct the wording if the organisers say otherwise.

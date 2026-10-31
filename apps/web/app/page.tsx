@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { Composer } from "@/components/Composer";
 import { Intro, Reveal, Starfield } from "@/components/Cinematic";
@@ -10,8 +11,8 @@ import { useI18n } from "@/lib/i18n";
 const STEPS: [string, string][] = [["Understand", "Voice or text, five languages."], ["Plan", "Options ranked, nothing run yet."], ["Approve", "Bound to exact target and amount."], ["Verify", "Read back before reporting."]];
 const DOMAINS: [string, string][] = [["Travel", "Refunds, rebooking"], ["Banking", "Disputes, scam checks"], ["Insurance", "Claims, evidence"], ["Telecom", "Billing, outages"],
   ["Retail", "Returns, refunds"], ["Housing", "Deposits, repairs"], ["Government", "Grievances, RTI"], ["Healthcare admin", "Billing, records"]];
-const WORKS: string[] = ["Eight case workflows", "Real Chromium on fixture apps", "Encrypted memory and history", "Verified receipts"];
-const NOT_YET: string[] = ["Live Bolna calls", "Real filing, email or bookings", "OCR for images", "Browser skills"];
+const WORKS: string[] = ["Eight case workflows", "Real browser on fixtures", "Encrypted memory", "Verified receipts"];
+const NOT_YET: string[] = ["Live Bolna calls", "Real filing or email", "Image OCR", "Browser skills"];
 
 export default function Landing() {
   const { t } = useI18n();
@@ -68,12 +69,23 @@ export default function Landing() {
           </div>
         </section>
 
+        <section id="buildathon" className="mx-auto max-w-6xl scroll-mt-24 px-4 pb-32 sm:px-6">
+          <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+            <div><h2 className="text-4xl">Built for the Y Combinator <span className="font-sans">×</span> Symphony Buildathon.</h2>
+              <p className="mt-4 max-w-lg text-lg text-muted">A hackathon prototype made with Bolna, 15 October to 20 November 2026. Many features are unfinished.</p></div>
+            <div className="flex flex-wrap items-center gap-6">
+              <a href="https://www.ycombinator.com" target="_blank" rel="noreferrer" aria-label="Y Combinator"><img src="/brand/ycombinator.png" alt="Y Combinator logo" width={112} height={99} className="h-24 w-auto rounded-xl" /></a>
+              <a href="https://www.bolna.ai" target="_blank" rel="noreferrer" aria-label="Bolna"><img src="/brand/bolna-buildathon.png" alt="Bolna, voice AI agents" width={331} height={175} className="h-28 w-auto rounded-xl border border-line" /></a>
+            </div>
+          </div>
+        </section>
+
         <section className="relative overflow-hidden border-t border-line px-4 py-28 text-center sm:px-6"><div className="rings" aria-hidden="true" />
           <h2 className="relative text-5xl">{t("hero.title1")} {t("hero.title2")}</h2><Link href="/register" className="btn-primary relative mt-8">{t("nav.start")}</Link></section>
       </main>
       <footer className="border-t border-line px-4 py-8 text-sm text-muted sm:px-6"><div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3"><Logo />
         <button className="btn-ghost" onClick={() => window.dispatchEvent(new Event("redeem:intro"))}>Replay intro</button>
-        <p>Built for the Bolna x YC Symphony Buildathon. Not endorsed by Bolna or Y Combinator.</p></div></footer>
+        <p>Not endorsed by Bolna, Symphony or Y Combinator.</p></div></footer>
     </>
   );
 }

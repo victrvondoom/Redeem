@@ -11,9 +11,11 @@ REDEEM turns a spoken request into a **planned, approved, executed and independe
 ![crypto](https://img.shields.io/badge/data-AES--256--GCM_envelope-ff7a1a?style=for-the-badge&labelColor=0a0909)
 ![db](https://img.shields.io/badge/PostgreSQL_16-verified_locally-ff7a1a?style=for-the-badge&labelColor=0a0909)
 
-<a href="https://www.ycombinator.com"><img src="docs/assets/buildathon-banner.png" alt="Y Combinator × Symphony Buildathon, Bolna, Oct 15 – Nov 20, 2026" width="46%"/></a>
+<a href="https://www.ycombinator.com"><img src="docs/assets/buildathon-banner.png" alt="Y Combinator × Symphony Buildathon, Bolna, Oct 15 to Nov 20, 2026" width="46%"/></a>
 
-**Built for the Y Combinator × Symphony Buildathon (powered by Bolna), Oct 15 – Nov 20, 2026.** This is a hackathon prototype: **many features do not work yet or run only on labelled fixtures** (live Bolna calls, real bookings/filing/email, OCR, LLM, browser skills, WebGL). Every status below is generated from tests, not from intent. The banner above is the event's artwork, shown for context; this project is not endorsed by the event or its organisers.
+<a href="https://www.ycombinator.com"><img src="docs/assets/ycombinator.png" alt="Y Combinator logo" height="90"/></a>&nbsp;&nbsp;&nbsp;<a href="https://www.bolna.ai"><img src="docs/assets/bolna-buildathon.png" alt="Bolna, voice AI agents" height="90"/></a>
+
+**REDEEM is a prototype built for the Y Combinator × Symphony Buildathon, run with Bolna, 15 October to 20 November 2026** (dates as printed on the event banner). It was made during the buildathon on Bolna's voice platform, so **many features are unfinished, blocked on credentials, or run only on labelled fixtures** (live Bolna calls, real bookings, filing and email, OCR, LLM, browser skills, WebGL). Every status below is generated from tests, not intent. The logos and banner are shown for context only; this project is not endorsed by, sponsored by or affiliated with Y Combinator, Symphony or Bolna.
 
 <img src="docs/media/intro.gif" alt="REDEEM intro: two cubes arrive from left and right, collide, the REDEEM wordmark and orange tagline appear" width="80%"/>
 
@@ -23,12 +25,12 @@ REDEEM turns a spoken request into a **planned, approved, executed and independe
 
 | | |
 |---|---|
-| **[Bolna](https://www.bolna.ai)** | Voice provider (the only live voice-call integration). No live call has been made without credentials. |
+| **[Bolna](https://www.bolna.ai)** | Buildathon partner and the voice provider (the only live voice-call integration). No live call has been made without credentials. |
 | **[Wispr Flow](https://wisprflow.ai)** | Shown in the intro as the second cube. |
-| **[Y Combinator](https://www.ycombinator.com)** | Built for the Bolna × YC Symphony Buildathon 2026. |
+| **[Y Combinator](https://www.ycombinator.com)** | Named in the event title, Y Combinator × Symphony Buildathon, which this was built for. |
 | **[WeMakeDevs](https://www.wemakedevs.org)** | Event community. |
 
-> Not endorsed by, sponsored by, or affiliated with any of the above. **Official logo artwork is not embedded**: the build sandbox could not reach those sites, and logos are never redrawn. Drop official files into [`apps/web/public/brand/`](apps/web/public/brand/README.md) and the intro cubes and this section can show them.
+> Not endorsed by, sponsored by, or affiliated with any of the above. Y Combinator and Bolna artwork above was supplied by the project owner; Wispr Flow and WeMakeDevs artwork is not embedded (logos are never redrawn). Drop official files into [`apps/web/public/brand/`](apps/web/public/brand/README.md) and the intro cubes and this section can show them.
 
 ## The 3D emblem
 
