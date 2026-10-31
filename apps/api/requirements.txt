@@ -18,3 +18,4 @@ python-multipart>=0.0.9
 mss>=9
 python-xlib>=0.33; sys_platform == "linux"
 websockets>=13
+jsonschema>=4.20

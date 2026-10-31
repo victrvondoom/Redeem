@@ -14,8 +14,9 @@ from sqlalchemy import select
 from ..core.deps import Ctx, audit, current_ctx, err
 from ..core.security import hash_token, limiter
 from ..db import get_db, utcnow
-from ..models import ComputerAction, ComputerDevice, ComputerFrame, ComputerSession, ComputerTask, PairingCode
-from ..computer import agent, cloud, hub
+from ..models import ComputerAction, ComputerDevice, ComputerFrame, ComputerScenario, ComputerScenarioVersion, ComputerSession, ComputerTask, PairingCode
+from ..computer import agent, cloud, hub, vision
+from ..computer import scenarios as SC
 from ..computer import protocol as P
 from ..computer.pipeline import Refused, perform
 
@@ -71,7 +72,7 @@ def _task_json(t: ComputerTask) -> dict:
 @router.get("/status")
 def status(ctx: Ctx = Depends(current_ctx)):
     ok, why = cloud.available()
-    return {"cloud_computer": {"available": ok, "detail": why}, "vision_model": {"configured": False, "detail": "PROVIDER_NOT_CONFIGURED: planning is rule-based over OCR of the real screen"},
+    return {"cloud_computer": {"available": ok, "detail": why}, "vision_model": vision.status(), "perception": vision.perception_modes(),
             "live_view": "screen updates about once per second (captured frames), not a video stream", "actions": sorted(P.ACTIONS),
             "bridge_install": "pip install ./apps/bridge  then  python -m redeem_bridge pair --server <this server> --code <code>"}
 
@@ -260,13 +261,16 @@ class TaskIn(BaseModel):
     instruction: str = Field(min_length=3, max_length=1000)
 
 
-def create_task(db, s: ComputerSession, instruction: str, source: str = "typed", call_id: str | None = None) -> ComputerTask:
+def create_task(db, s: ComputerSession, instruction: str, source: str = "typed", call_id: str | None = None, *, scenario: ComputerScenario | None = None,
+                intent: dict | None = None) -> ComputerTask:
     if s.status != "ACTIVE":
         raise err(409, "not_active", f"Session is {s.status}. Resume it (or hand control back) first.")
     running = db.scalar(select(ComputerTask).where(ComputerTask.session_id == s.id, ComputerTask.status.in_(["PLANNING", "RUNNING", "PAUSED", "USER_CONTROL"])))
     if running:
         raise err(409, "task_running", "Another task is still running on this computer")
     t = ComputerTask(tenant_id=s.tenant_id, session_id=s.id, instruction=instruction.strip(), source=source, call_id=call_id)
+    if scenario:
+        t.scenario_id, t.scenario_version, t.intent = scenario.id, scenario.version, intent or {}
     db.add(t)
     db.commit()
     agent.start(t.id)
@@ -326,6 +330,182 @@ def reject(tid: str, ctx: Ctx = Depends(current_ctx)):
     return _task_json(t)
 
 
+# ------------------------------------------------------------------ scenario catalog (database-backed)
+def _scn(ctx: Ctx, key: str, *, own_only: bool = False) -> ComputerScenario:
+    SC.seed(ctx.db)
+    q = select(ComputerScenario).where(ComputerScenario.key == key)
+    q = q.where(ComputerScenario.tenant_id == ctx.tenant_id) if own_only else q.where((ComputerScenario.tenant_id == ctx.tenant_id) | ComputerScenario.tenant_id.is_(None))
+    sc = ctx.db.scalars(q.order_by(ComputerScenario.tenant_id.is_(None))).first()  # a workspace entry wins over a built-in with the same key
+    if not sc:
+        raise err(404, "not_found", "Scenario not found")
+    return sc
+
+
+def _need_admin(ctx: Ctx) -> None:
+    if ctx.role not in ("owner", "admin"):
+        raise err(403, "forbidden", "Only workspace owners and administrators can change scenario definitions")
+
+
+def _scn_json(sc: ComputerScenario, runs: list[ComputerTask] | None = None, detail: bool = False) -> dict:
+    ok, why = _runnable(sc)
+    out = {"id": sc.id, "key": sc.key, "name": sc.name, "description": sc.description, "category": sc.category, "enabled": sc.enabled, "version": sc.version,
+           "required_os": sc.required_os, "required_capabilities": sc.required_capabilities, "built_in": sc.tenant_id is None, "runnable": ok, "unavailable_reason": why,
+           "parameter_schema": sc.parameter_schema, "last_run": SC.run_view(runs[0]) if runs else None, "run_count": len(runs or []),
+           "created_by": sc.created_by, "created_at": sc.created_at.isoformat(), "updated_at": sc.updated_at.isoformat()}
+    if detail:
+        out |= {"steps": sc.steps, "expected_result": sc.expected_result, "verification": sc.verification, "approvals": sc.approvals, "executor": sc.executor}
+    return out
+
+
+def _runnable(sc: ComputerScenario) -> tuple[bool, str | None]:
+    if not sc.executor:
+        return False, "Describes agent behaviour; it is not a task you can start."
+    if not agent.supports(sc.executor):
+        return False, "The computer agent does not implement this scenario yet (see docs/STATIC_TODO.md)."
+    return True, None
+
+
+@router.get("/scenarios")
+def list_scenarios(ctx: Ctx = Depends(current_ctx), q: str = Query("", max_length=80), category: str = Query("", max_length=40), os: str = Query("", max_length=16)):
+    SC.seed(ctx.db)
+    rows = list(ctx.db.scalars(select(ComputerScenario).where((ComputerScenario.tenant_id == ctx.tenant_id) | ComputerScenario.tenant_id.is_(None)).order_by(ComputerScenario.name)))
+    shadow = {r.key for r in rows if r.tenant_id}
+    rows = [r for r in rows if r.enabled or r.tenant_id == ctx.tenant_id]
+    rows = [r for r in rows if not (r.tenant_id is None and r.key in shadow)]
+    if q:
+        rows = [r for r in rows if q.lower() in f"{r.name} {r.description} {r.key}".lower()]
+    if category:
+        rows = [r for r in rows if r.category == category]
+    if os:
+        rows = [r for r in rows if r.required_os in (os, "any")]
+    runs = SC.last_runs(ctx.db, ctx.tenant_id, rows)
+    return {"items": [_scn_json(r, runs[r.id]) for r in rows], "categories": sorted({r.category for r in rows}), "operating_systems": sorted({r.required_os for r in rows})}
+
+
+class ScenarioIn(BaseModel):
+    key: str = Field(min_length=1, max_length=60)
+    name: str = Field(min_length=1, max_length=120)
+    description: str = Field(default="", max_length=2000)
+    category: str = Field(default="general", max_length=40)
+    required_capabilities: list[str] = Field(default_factory=list, max_length=12)
+    required_os: str = "any"
+    parameter_schema: dict = Field(default_factory=lambda: {"type": "object"})
+    steps: list[dict] = Field(default_factory=list, max_length=40)
+    expected_result: str = Field(default="", max_length=1000)
+    verification: list[str] = Field(default_factory=list, max_length=12)
+    approvals: list[str] = Field(default_factory=list, max_length=12)
+    executor: str | None = Field(default=None, max_length=40)
+    reason: str = Field(default="", max_length=300)
+
+
+def _validated(body: dict) -> dict:
+    try:
+        return SC.validate_definition(body)
+    except SC.Invalid as e:
+        raise err(422, "invalid_scenario", str(e))
+
+
+@router.post("/scenarios", status_code=201)
+def create_scenario(body: ScenarioIn, ctx: Ctx = Depends(current_ctx)):
+    _need_admin(ctx)
+    d = _validated(body.model_dump(exclude={"reason"}))
+    if ctx.db.scalar(select(ComputerScenario).where(ComputerScenario.key == d["key"], (ComputerScenario.tenant_id == ctx.tenant_id) | ComputerScenario.tenant_id.is_(None))):
+        raise err(409, "key_exists", "A scenario with that key already exists")
+    sc = ComputerScenario(tenant_id=ctx.tenant_id, created_by=ctx.user.email, **d)
+    ctx.db.add(sc)
+    ctx.db.flush()
+    SC.record_version(ctx.db, sc, ctx.user.email, body.reason or "created")
+    audit(ctx.db, ctx, "computer.scenario_create", sc.id)
+    ctx.db.commit()
+    return _scn_json(sc, [], detail=True)
+
+
+@router.get("/scenarios/{key}")
+def get_scenario(key: str, ctx: Ctx = Depends(current_ctx)):
+    SC.seed(ctx.db)
+    sc = _scn(ctx, key)
+    return _scn_json(sc, SC.last_runs(ctx.db, ctx.tenant_id, [sc])[sc.id], detail=True)
+
+
+@router.put("/scenarios/{key}")
+def edit_scenario(key: str, body: ScenarioIn, ctx: Ctx = Depends(current_ctx)):
+    _need_admin(ctx)
+    sc = _scn(ctx, key)
+    if sc.tenant_id is None:
+        raise err(403, "built_in", "Built-in scenarios cannot be edited. Create a workspace scenario with a new key instead.")
+    if body.key != sc.key:
+        raise err(422, "key_immutable", "The key of a scenario cannot change")
+    d = _validated(body.model_dump(exclude={"reason"}))
+    for k, v in d.items():
+        setattr(sc, k, v)
+    sc.version += 1
+    SC.record_version(ctx.db, sc, ctx.user.email, body.reason or "edited")
+    audit(ctx.db, ctx, "computer.scenario_edit", sc.id)
+    ctx.db.commit()
+    return _scn_json(sc, SC.last_runs(ctx.db, ctx.tenant_id, [sc])[sc.id], detail=True)
+
+
+class EnabledIn(BaseModel):
+    enabled: bool
+
+
+@router.post("/scenarios/{key}/enabled")
+def set_enabled(key: str, body: EnabledIn, ctx: Ctx = Depends(current_ctx)):
+    _need_admin(ctx)
+    sc = _scn(ctx, key)
+    if sc.tenant_id is None:
+        raise err(403, "built_in", "Built-in scenarios are managed by the platform")
+    sc.enabled = body.enabled
+    audit(ctx.db, ctx, "computer.scenario_enable" if body.enabled else "computer.scenario_disable", sc.id)
+    ctx.db.commit()
+    return _scn_json(sc, SC.last_runs(ctx.db, ctx.tenant_id, [sc])[sc.id])
+
+
+@router.get("/scenarios/{key}/versions")
+def scenario_versions(key: str, ctx: Ctx = Depends(current_ctx)):
+    sc = _scn(ctx, key)
+    rows = ctx.db.scalars(select(ComputerScenarioVersion).where(ComputerScenarioVersion.scenario_id == sc.id).order_by(ComputerScenarioVersion.version.desc()))
+    return {"items": [{"version": v.version, "changed_by": v.changed_by, "reason": v.reason, "created_at": v.created_at.isoformat(), "snapshot": v.snapshot} for v in rows]}
+
+
+@router.get("/scenarios/{key}/runs")
+def scenario_runs(key: str, ctx: Ctx = Depends(current_ctx)):
+    sc = _scn(ctx, key)
+    runs = SC.last_runs(ctx.db, ctx.tenant_id, [sc])[sc.id]
+    return {"items": [{**SC.run_view(t), "scenario_version": t.scenario_version, "instruction": t.instruction} for t in runs[:50]]}
+
+
+class RunIn(BaseModel):
+    session_id: str = Field(min_length=3, max_length=40)
+    params: dict = Field(default_factory=dict)
+
+
+@router.post("/scenarios/{key}/run", status_code=202)
+def run_scenario(key: str, body: RunIn, ctx: Ctx = Depends(current_ctx)):
+    """Starts a real task on the chosen computer session through the same agent loop as typed tasks."""
+    sc = _scn(ctx, key)
+    if not sc.enabled:
+        raise err(409, "scenario_disabled", "This scenario is disabled")
+    ok, why = _runnable(sc)
+    if not ok:
+        raise err(501, "not_implemented", why or "not runnable")
+    s = _sess(ctx, body.session_id)
+    d = ctx.db.get(ComputerDevice, s.device_id)
+    if sc.required_os != "any" and d and d.platform != sc.required_os:
+        raise err(409, "os_mismatch", f"This scenario needs a {sc.required_os} computer; this one reports {d.platform or 'unknown'}")
+    try:
+        params = SC.check_params(sc, body.params)
+        intent = agent.intent_for(sc.executor, params, ctx.tenant_id, ctx.db)
+    except SC.Invalid as e:
+        raise err(422, "invalid_parameters", str(e))
+    except agent.BadParams as e:
+        raise err(422, "invalid_parameters", str(e))
+    t = create_task(ctx.db, s, f"Scenario {sc.key} v{sc.version}", scenario=sc, intent=intent)
+    audit(ctx.db, ctx, "computer.scenario_run", t.id)
+    ctx.db.commit()
+    return {**_task_json(t), "scenario": {"key": sc.key, "version": sc.version}}
+
+
 # ------------------------------------------------------------------ frames + bridge socket
 @router.get("/frames/{fid}")
 def frame_png(fid: str, ctx: Ctx = Depends(current_ctx)):
@@ -338,3 +518,30 @@ def frame_png(fid: str, ctx: Ctx = Depends(current_ctx)):
 @router.websocket("/bridge/ws")
 async def bridge_ws(ws: WebSocket):
     await hub.serve(ws)
+
+
+# ------------------------------------------------------------------ vision (provider-backed; no fake model)
+@router.get("/vision")
+def vision_status(ctx: Ctx = Depends(current_ctx)):
+    return {**vision.status(), "perception": vision.perception_modes()}
+
+
+class ProposeIn(BaseModel):
+    task: str = Field(min_length=3, max_length=500)
+
+
+@router.post("/sessions/{sid}/vision/propose")
+def vision_propose(sid: str, body: ProposeIn, ctx: Ctx = Depends(current_ctx)):
+    """Ask the configured multimodal model to propose ONE next operation for the newest frame. It is validated and grounded, never executed here."""
+    s = _sess(ctx, sid)
+    if not vision.configured():
+        raise err(503, "PROVIDER_NOT_CONFIGURED", vision.status()["detail"])
+    f = ctx.db.get(ComputerFrame, s.latest_frame_id) if s.latest_frame_id else None
+    if not f or f.tenant_id != ctx.tenant_id:
+        raise err(409, "no_frame", "Observe the screen first")
+    try:
+        prop = vision.plan(f, body.task)
+    except vision.ProviderError as e:
+        raise err(502, "vision_provider_error", str(e))
+    ctx.db.refresh(s)
+    return {"frame_id": f.id, "proposal": prop.model_dump(), "grounding": vision.ground_proposal(f, s.latest_frame_id, prop), "executed": False}
