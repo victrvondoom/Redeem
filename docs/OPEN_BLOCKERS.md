@@ -14,7 +14,7 @@
 11. Voice: no live-call evidence of interruption handling, language switching, or tool calls; agent definition export is unverified against a live Bolna account.
 12. Quality Lab has no latency/cost-per-verified-mission from live data (fixture timings only).
 13. Competitor repos were reviewed at source level but their deployed apps were not exercised.
-5. Official partner logos: Bolna and Wispr Flow are now embedded (downloaded unmodified from their own sites on 2026-10-31). Y Combinator and WeMakeDevs SVGs are still absent; logos must not be redrawn. Place official files in apps/web/public/brand/ (see its README); the intro cubes pick them up automatically.
+5. Official partner logos: Bolna and Y Combinator are embedded unmodified. WeMakeDevs artwork is still absent; logos must not be redrawn. Place official files in apps/web/public/brand/ (see its README); the intro cubes pick them up automatically.
 6. No KMS: the key-encryption key comes from REDEEM_MASTER_KEY. Production must set it (REDEEM_ENV=production refuses to start without it).
 
 14. Browser skill run control (pause/resume/stop) lives in process memory: with more than one API instance, a control request must reach the instance running the skill. Runs execute in a daemon thread; a restart mid-run leaves the row RUNNING (not yet reconciled at startup).

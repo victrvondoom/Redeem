@@ -5,6 +5,7 @@ import { Suspense, useState, type FormEvent } from "react";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
+import { DemoLogin } from "./DemoLogin";
 import { ErrorNote, LangSwitcher, Logo } from "./ui";
 
 function Form({ mode }: { mode: "login" | "register" }) {
@@ -40,6 +41,7 @@ function Form({ mode }: { mode: "login" | "register" }) {
           {mode === "register" && <p className="mt-1 text-xs text-muted">At least 10 characters.</p>}</div>
         <ErrorNote error={error} />
         <button className="btn-primary w-full" disabled={busy}>{mode === "register" ? "Create account" : "Sign in"}</button>
+        <DemoLogin className="btn w-full" label="Demo login (no account needed)" />
         <p className="text-center text-sm text-muted">{mode === "register" ? <>Have an account? <Link className="font-semibold text-indigo" href={`/login${next ? `?next=${encodeURIComponent(next)}` : ""}`}>Sign in</Link></> : <>New here? <Link className="font-semibold text-indigo" href="/register">Create an account</Link></>}</p>
       </form>
     </main>

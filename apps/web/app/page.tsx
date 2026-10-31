@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { Composer } from "@/components/Composer";
+import { DemoLogin } from "@/components/DemoLogin";
 import { Intro, Reveal, Starfield } from "@/components/Cinematic";
 import { HeroDeck, LiveStats, PipelineSim } from "@/components/Showcase";
 import { SiteNav } from "@/components/SiteNav";
@@ -25,9 +26,9 @@ export default function Landing() {
           <div className="rings" aria-hidden="true" /><Starfield />
           <div className="relative mx-auto grid max-w-6xl items-center gap-6 px-4 pb-20 pt-16 sm:px-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
             <div className="rise">
-              <h1 className="pixel text-[2.9rem] font-normal leading-[1.05] sm:text-7xl">{t("hero.title1")}<br />{t("hero.title2")}</h1>
+              <h1 className="pixel text-[2.9rem] leading-[1.08] sm:text-7xl">{t("hero.title1")}<br />{t("hero.title2")}</h1>
               <p className="mt-6 max-w-xl text-lg text-muted">{t("hero.sub")}</p>
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row"><a href="#start" className="btn-primary">{t("hero.cta1")}</a><a href="#watch" className="btn-ghost">Watch the engine</a></div>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row"><a href="#start" className="btn-primary">{t("hero.cta1")}</a><a href="#watch" className="btn-ghost">Watch the engine</a><DemoLogin className="btn-ghost" label="Demo login" /></div>
             </div>
             <div className="rise" style={{ animationDelay: ".25s" }}><HeroDeck /></div>
           </div>

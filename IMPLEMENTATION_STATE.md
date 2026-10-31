@@ -22,7 +22,7 @@ Last verified: 121 pytest, 20 Playwright, tsc/eslint/build green. Next exact act
 Backend 199 passed; Playwright 35 passed. New: Live Engine page, cinematic landing/theme, AES-256-GCM document encryption at rest, public aggregate stats, README with embedded media. See docs/IMPLEMENTATION_EVIDENCE.md.
 
 ## 250-task pass (latest)
-Backend 217 passed, E2E 38. Added: orange/graphite theme, REDEEM intro (Bolna + Wispr Flow cubes; official logos blocked), envelope encryption with rotation, persistent encrypted memory + Memory Center, Privacy Center, Bolna save_answer/recall tools, README rewrite + generated feature table + CI. See docs/TASKS_250_STATUS.md for what is NOT done.
+Backend 217 passed, E2E 38. Added: orange/graphite theme, REDEEM intro (Bolna + Y Combinator cubes; official logos blocked), envelope encryption with rotation, persistent encrypted memory + Memory Center, Privacy Center, Bolna save_answer/recall tools, README rewrite + generated feature table + CI. See docs/TASKS_250_STATUS.md for what is NOT done.
 
 ## Context/graph/history + theme pass (latest)
 Backend 222, E2E 40. New: conversation_turns (0008), /timeline, /context, /graph, History timeline tab, Memory Graph page, Conversation context panel, black+green+orange theme, Gloock pixel display font. README now carries the Buildathon banner and an honest "many features do not work" statement.
@@ -34,7 +34,7 @@ Hallmark rules applied as data (skill scripts not executed); `node scripts/ui_fl
 Backend 240 (+1 skipped live test), E2E 43. New: real OCR (RapidOCR) with review, brief-to-PDF, Google OAuth/Calendar/Gmail adapter with approvals and reconcile-not-resend (contract-verified, credential-blocked), Connections Center live providers, demo fixtures off in production, migration 0009. See docs/FINAL_FUNCTIONAL_COMPLETION_REPORT.md and docs/REAL_INTEGRATION_STATUS.md.
 
 ## Skills, projects, logos pass (latest)
-Backend 245 passed, 1 skipped (live Google test, no credentials); E2E 46 passed; ruff, tsc, eslint, next build green. New: recorded browser skills with live pause/resume/stop (`resolve/skills.py`, `/app/skills`), Project Store (`/app/projects`), migration 0010, official Bolna and Wispr Flow logos, `browser_available()` now detects Playwright-managed Chromium (CI). No provider credentials were present in this environment. Next: DevOps/Science/Creative adapters; reconcile RUNNING skill runs at startup.
+Backend 245 passed, 1 skipped (live Google test, no credentials); E2E 46 passed; ruff, tsc, eslint, next build green. New: recorded browser skills with live pause/resume/stop (`resolve/skills.py`, `/app/skills`), Project Store (`/app/projects`), migration 0010, official Bolna and Y Combinator logos, `browser_available()` now detects Playwright-managed Chromium (CI). No provider credentials were present in this environment. Next: DevOps/Science/Creative adapters; reconcile RUNNING skill runs at startup.
 
 ## System-design trail pass (latest)
 Backend 246 passed, 1 skipped; tsc/eslint(0 errors, 21 pre-existing react-hooks warnings)/ruff green. New: `docs/system-design/index.html` (20-topic visual guide with an evidence-based audit of what REDEEM implements; regenerate with `python scripts/build_system_design.py`, checked in CI), and 429 responses now carry `Retry-After` + `retry_after_seconds`. Audit result: 3 implemented, 10 partial, 7 not implemented (caching, load balancer, K8s, backoff+jitter, queue/DLQ, pub/sub, cron). Venv note: use Python 3.12 (rapidocr has no 3.13 wheels).

@@ -52,6 +52,28 @@ def register(body: RegisterIn, request: Request, response: Response, db: Session
     return _me(user, tenant.id, ws.id, "owner", csrf)
 
 
+@router.post("/demo", status_code=201)
+def demo_sign_in(request: Request, response: Response, db: Session = Depends(get_db)):
+    """One-click demo: a fresh, isolated workspace seeded with the labelled practice data. Off whenever demo fixtures are off (production)."""
+    if not settings.demo_enabled:
+        raise err(404, "demo_disabled", "Demo sign-in is turned off on this server")
+    limiter.check(f"demo:{request.client.host if request.client else '-'}", settings.register_rate_limit_per_minute)
+    tag = new_token()[:10].lower()
+    user = User(email=f"demo-{tag}@demo.redeem.invalid", name="Demo user", password_hash=hash_password(new_token()), language="en")
+    tenant = Tenant(name="Demo workspace")
+    db.add_all([user, tenant])
+    db.flush()
+    ws = Workspace(tenant_id=tenant.id, name="Main")
+    db.add(ws)
+    db.flush()
+    db.add(Membership(user_id=user.id, tenant_id=tenant.id, workspace_id=ws.id, role="owner"))
+    seed_tenant(db, tenant.id)
+    csrf = _open_session(db, user, response)
+    audit(db, None, "auth.demo", user.id, tenant_id=tenant.id)
+    db.commit()
+    return _me(user, tenant.id, ws.id, "owner", csrf)
+
+
 @router.post("/login")
 def login(body: LoginIn, request: Request, response: Response, db: Session = Depends(get_db)):
     ip = request.client.host if request.client else "-"

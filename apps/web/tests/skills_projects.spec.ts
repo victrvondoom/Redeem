@@ -10,10 +10,10 @@ async function register(page: Page) {
   await expect(page).toHaveURL(/\/app$/);
 }
 
-test("intro cubes show the official Bolna and Wispr Flow logo files", async ({ page }) => {
+test("intro cubes show the official Bolna and Y Combinator logo files", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("intro").getByAltText("Bolna logo").first()).toBeVisible({ timeout: 6_000 });
-  await expect(page.getByTestId("intro").getByAltText("Wispr Flow logo").first()).toBeVisible();
+  await expect(page.getByTestId("intro").getByAltText("Y Combinator logo").first()).toBeVisible();
 });
 
 test("record a browser skill in real Chromium, replay it live with frames, persisted after reload", async ({ page }) => {

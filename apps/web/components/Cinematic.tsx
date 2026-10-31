@@ -78,7 +78,7 @@ export function CountUp({ to, ms = 1400 }: { to: number; ms?: number }) {
 
 /** Partner logo slot. Shows ONLY an official asset placed in /public/brand/<file>; if the file is absent it shows the partner's name as plain text (never a redrawn logo). */
 function LogoPlate({ file, name }: { file: string; name: string }) {
-  // The official Bolna mark is white-on-transparent, so it sits on a dark plate; Wispr Flow's is black, so it sits on a light one. The files are used unmodified.
+  // The official Bolna mark is white-on-transparent, so it sits on a dark plate; the Y Combinator mark is on its own orange tile, so it sits on a light one. The files are used unmodified.
   const dark = file.startsWith("bolna");
   const [ok, setOk] = useState(false);
   useEffect(() => { fetch("/brand/manifest.json").then((r) => (r.ok ? r.json() : { files: [] })).then((m: { files: string[] }) => setOk(m.files.includes(file))).catch(() => setOk(false)); }, [file]);
@@ -106,7 +106,7 @@ function Cube({ file, name }: { file: string; name: string }) {
 }
 
 /**
- * REDEEM identity reveal (~4.6s): a Bolna cube arrives from the left and a Wispr Flow cube from the right, they collide and
+ * REDEEM identity reveal (~4.6s): a Bolna cube arrives from the left and a Y Combinator cube from the right, they collide and
  * assemble into the REDEEM emblem, the wordmark rises, the orange tagline follows, then the camera pulls back into the app.
  * Skippable (button / Esc / Enter), replayable (window event "redeem:intro"), disabled for prefers-reduced-motion. Never blocks the page.
  */
@@ -131,7 +131,7 @@ export function Intro() {
       <div className="intro-vignette" aria-hidden="true" />
       <div className="intro-world" aria-hidden="true">
         <div className="intro-box intro-box-l"><Cube file="bolna.svg" name="Bolna" /></div>
-        <div className="intro-box intro-box-r"><Cube file="wispr-flow.svg" name="Wispr Flow" /></div>
+        <div className="intro-box intro-box-r"><Cube file="ycombinator.png" name="Y Combinator" /></div>
         <div className="intro-ring" />
         <div className="intro-emblem"><span>R</span></div>
       </div>

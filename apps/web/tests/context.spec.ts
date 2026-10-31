@@ -44,12 +44,12 @@ test("history timeline stores and searches everything; graph links it; context m
   await expect(page.getByText("requested (from)")).toBeVisible();
 });
 
-test("black + green + orange identity with the pixel-serif display font", async ({ page }) => {
+test("black + green + orange identity with the readable Manrope display font", async ({ page }) => {
   await page.goto("/");
   const h1 = page.getByRole("heading", { level: 1 });
   await expect(h1).toContainText("Speak your need");
-  expect(await h1.evaluate((e) => getComputedStyle(e).fontFamily)).toContain("Gloock");
-  expect(await h1.evaluate((e) => getComputedStyle(e).filter)).toContain("pixelate");
+  expect(await h1.evaluate((e) => getComputedStyle(e).fontFamily)).toContain("Manrope");  // plain, readable headline font
+  expect(await h1.evaluate((e) => getComputedStyle(e).filter)).toBe("none");  // no blur/pixel filter on the headline
   expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe("rgb(4, 6, 5)");
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--green").trim())).toBe("52 211 102");
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--accent").trim())).toBe("255 122 26");

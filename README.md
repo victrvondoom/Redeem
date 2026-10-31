@@ -1,77 +1,176 @@
+<div align="center">
 
+# REDEEM
 
 ### Speak Your Need. <span style="color:#ff7a1a">We Take the Lead.</span>
 
-REDEEM turns a spoken request into a **planned, approved, executed and independently verified** outcome, across travel, banking, insurance, telecom, retail, housing, government and healthcare admin. It remembers what you tell it (privately, and only what you confirm).
+<br/>
 
+<img src="docs/assets/buildathon-banner.png" alt="Y Combinator x Symphony Buildathon with Bolna, 15 October to 20 November 2026" width="62%"/>
 
-<a href="https://www.ycombinator.com"><img src="docs/assets/buildathon-banner.png" alt="Y Combinator × Symphony Buildathon, Bolna, Oct 15 to Nov 20, 2026" width="46%"/></a>
+<br/><br/>
 
-<a href="https://www.ycombinator.com"><img src="docs/assets/ycombinator.png" alt="Y Combinator logo" height="90"/></a>&nbsp;&nbsp;&nbsp;<a href="https://www.bolna.ai"><img src="docs/assets/bolna-buildathon.png" alt="Bolna, voice AI agents" height="90"/></a>
+<img src="docs/assets/ycombinator.png" alt="Y Combinator" height="110"/> &nbsp;&nbsp;&nbsp;&nbsp; <img src="docs/assets/bolna-buildathon.png" alt="Bolna voice AI" height="110"/>
 
-**REDEEM is a prototype built for the Y Combinator × Symphony Buildathon, run with Bolna, 15 October to 20 November 2026** (dates as printed on the event banner). It was made during the buildathon on Bolna's voice platform, so **many features are unfinished, blocked on credentials, or run only on labelled fixtures** (live Bolna and Google calls need your credentials; real bookings, filing, LLM, browser skills and WebGL are not built). Every status below is generated from tests, not intent. The logos and banner are shown for context only; this project is not endorsed by, sponsored by or affiliated with Y Combinator, Symphony or Bolna.
+<br/><br/>
 
-<img src="docs/media/intro.gif" alt="REDEEM intro: two cubes arrive from left and right, collide, the REDEEM wordmark and orange tagline appear" width="80%"/>
+<img src="docs/media/intro.gif" alt="REDEEM intro: the Bolna and Y Combinator cubes arrive from left and right, meet, and the REDEEM name and orange tagline appear" width="80%"/>
+
+<sub>The real intro of the app, recorded from the running UI (the app's <b>Replay intro</b> button plays it again).</sub>
 
 </div>
 
-## Partners and context
+<br/>
 
-| | |
+> **Built for the Y Combinator x Symphony Buildathon, run with Bolna (15 Oct to 20 Nov 2026, dates as printed on the banner).**
+> **Try it now: press "Demo login" on the landing page.** Anyone can open a private demo workspace with practice data, no account needed.
+> Parts that talk to outside services (live Bolna calls, Google Calendar/Gmail) switch on as soon as you add your own keys.
+> Not endorsed by, sponsored by or affiliated with Y Combinator, Symphony or Bolna.
+
+---
+
+## 1. What is REDEEM, in plain words
+
+You **say what you need** ("my flight was cancelled, get my money back"). REDEEM then:
+
+1. **Understands** the request and the people, bookings and documents involved.
+2. **Makes a plan** and shows it to you.
+3. **Waits for your OK** on every step that changes something.
+4. **Does the steps** through connectors.
+5. **Checks the result itself** (it never trusts "sent" without looking).
+6. **Remembers** what you told it, but only what you confirm.
+
+It covers eight everyday areas: **travel, banking, insurance, telecom, shopping, housing, government complaints and healthcare paperwork.**
+
+## 2. The big picture
+
+```mermaid
+%%{init: {"theme":"base","themeVariables":{"fontSize":"26px","fontFamily":"Arial","primaryColor":"#fff3e6","primaryBorderColor":"#ff7a1a","lineColor":"#444","primaryTextColor":"#111"}}}%%
+flowchart TB
+    A(["1. YOU SPEAK"]) --> B["2. UNDERSTAND"]
+    B --> C["3. PLAN"]
+    C --> D{"4. YOU APPROVE?"}
+    D -- "yes" --> E["5. DO IT"]
+    D -- "no" --> X(["STOP. Nothing changed"])
+    E --> F["6. CHECK IT"]
+    F --> G(["7. REPORT + REMEMBER"])
+    style A fill:#ff7a1a,color:#fff,stroke:#c4560a
+    style D fill:#fff3e6,stroke:#ff7a1a
+    style G fill:#ff7a1a,color:#fff,stroke:#c4560a
+    style X fill:#eee,stroke:#888
+```
+
+**Why this matters:** nothing happens without your approval, and "done" only means done after REDEEM has checked it independently.
+
+## 3. Architecture (what runs where)
+
+```mermaid
+%%{init: {"theme":"base","themeVariables":{"fontSize":"24px","fontFamily":"Arial","primaryColor":"#fff3e6","primaryBorderColor":"#ff7a1a","lineColor":"#444","primaryTextColor":"#111"}}}%%
+flowchart TB
+    subgraph YOU["YOU"]
+        V["VOICE<br/>Bolna call"]
+        W["WEB APP<br/>Next.js"]
+    end
+    subgraph API["REDEEM API (FastAPI)"]
+        R["ROUTERS<br/>auth, missions, cases,<br/>voice, memory, workspace"]
+        ENG["MISSION ENGINE<br/>plan, approve, execute, verify"]
+        AG["AGENT ROLES<br/>only EXECUTOR may act"]
+    end
+    subgraph CON["CONNECTORS"]
+        C1["Flights + hotel<br/>(practice data)"]
+        C2["CRM + Calendar<br/>Gmail (needs login)"]
+        C3["Browser<br/>real Chromium"]
+    end
+    subgraph DATA["DATA"]
+        DB[("DATABASE<br/>SQLite or Postgres")]
+        VA["VAULT<br/>AES-256 encrypted"]
+        LG["LEDGER<br/>append-only, hash-chained"]
+    end
+    V --> R
+    W --> R
+    R --> ENG
+    ENG --> AG
+    AG --> C1
+    AG --> C2
+    AG --> C3
+    ENG --> LG
+    ENG --> DB
+    DB --- VA
+    style YOU fill:#fff,stroke:#ff7a1a
+    style API fill:#fff3e6,stroke:#ff7a1a
+    style CON fill:#fff,stroke:#999
+    style DATA fill:#fff,stroke:#999
+```
+
+| Block | Plain meaning |
 |---|---|
-| **[Bolna](https://www.bolna.ai)** | Buildathon partner and the voice provider (the only live voice-call integration). No live call has been made without credentials. |
-| **[Wispr Flow](https://wisprflow.ai)** | Shown in the intro as the second cube. |
-| **[Y Combinator](https://www.ycombinator.com)** | Named in the event title, Y Combinator × Symphony Buildathon, which this was built for. |
-| **[WeMakeDevs](https://www.wemakedevs.org)** | Event community. |
+| **Voice** | You talk through Bolna. Live calls need your Bolna credentials (not tested live, see limits). |
+| **Mission engine** | One brain that runs every kind of task the same safe way. |
+| **Agent roles** | Planner, observer, specialists, verifier, recovery, memory can only think; **only the executor can act.** |
+| **Connectors** | The hands: each can *look up*, *submit* and *verify*. |
+| **Ledger** | A diary nobody can edit afterwards; each line is chained to the one before. |
+| **Vault** | Your private data is encrypted before it is stored. |
 
-> Not endorsed by, sponsored by, or affiliated with any of the above. Y Combinator and Bolna artwork above was supplied by the project owner; Wispr Flow and WeMakeDevs artwork is not embedded (logos are never redrawn). Drop official files into [`apps/web/public/brand/`](apps/web/public/brand/README.md) and the intro cubes and this section can show them.
+## 4. The safety rules, as one picture
 
-## The 3D emblem
+```mermaid
+%%{init: {"theme":"base","themeVariables":{"fontSize":"24px","fontFamily":"Arial","actorBkg":"#fff3e6","actorBorder":"#ff7a1a","noteBkgColor":"#fff3e6"}}}%%
+sequenceDiagram
+    autonumber
+    participant U as YOU
+    participant E as ENGINE
+    participant C as CONNECTOR
+    E->>U: Here is the plan (fingerprint A1B2)
+    U->>E: Approve A1B2
+    Note over E: Plan changed? Fingerprint no longer matches, so the approval is VOID
+    E->>C: Do the step
+    C--xE: No answer (unsure)
+    Note over E: NEVER send twice. Look it up read-only first
+    E->>C: Is it there?
+    C->>E: Yes, it exists
+    E->>U: Done and CHECKED
+```
 
-<img src="docs/assets/emblem-3d.svg" alt="REDEEM 3D emblem with width, depth and extrusion dimensions" width="48%"/> <img src="docs/assets/metrics-3d.svg" alt="Measured metrics" width="48%"/>
+- **Approval is tied to the exact plan.** Change anything and you must approve again.
+- **Unsure is not success.** If the answer is lost, REDEEM looks the result up instead of repeating the action.
+- **Your data stays yours.** Every query is limited to your own workspace; the identity comes only from your login session.
 
-Geometry is documented in the SVG (width 120, depth 120, extrusion 36, bevel 8; ratio 10:10:3), generated by [`scripts/build_readme_assets.py`](scripts/build_readme_assets.py). It is an isometric SVG render, not a WebGL model.
+## 5. How memory works
 
-## See it
+```mermaid
+%%{init: {"theme":"base","themeVariables":{"fontSize":"24px","fontFamily":"Arial","primaryColor":"#fff3e6","primaryBorderColor":"#ff7a1a","primaryTextColor":"#111"}}}%%
+flowchart TB
+    S(["YOU SAY<br/>something"]) --> M["MAP TO A FIELD<br/>(rules, no guessing)"]
+    M --> Q{"CLEAR?"}
+    Q -- "no" --> K["ASK YOU<br/>to clarify"]
+    Q -- "yes" --> P["PROPOSED"]
+    P --> Y{"YOU CONFIRM?"}
+    Y -- "yes" --> OK(["CONFIRMED<br/>used in later tasks"])
+    Y -- "no" --> NO(["REJECTED"])
+    style OK fill:#ff7a1a,color:#fff
+```
 
-<details open>
-<summary><b>Live Engine: a real run, replayed from its ledger</b></summary>
+Only **confirmed** memory is used, it is **encrypted**, and you can **correct or delete** it in the Memory Center and Privacy Center.
 
-<img src="docs/media/live-engine.gif" alt="Live Engine playback" width="100%"/>
+## 6. How a consumer case moves
 
-<img src="docs/screenshots/v5/live-engine.png" alt="Live Engine after completion" width="100%"/>
+```mermaid
+%%{init: {"theme":"base","themeVariables":{"fontSize":"24px","fontFamily":"Arial","primaryColor":"#fff3e6","primaryBorderColor":"#ff7a1a","primaryTextColor":"#111"}}}%%
+flowchart TB
+    I["1. TELL US"] --> D["2. ADD<br/>DOCUMENTS"]
+    D --> A["3. READ<br/>+ CHECK"]
+    A --> R["4. RANK<br/>OPTIONS"]
+    R --> H["5. DRAFT<br/>+ APPROVE"]
+    H --> G["6. YOU FILE<br/>(guided)"]
+    G --> O(["7. OUTCOME<br/>needs proof"])
+    style O fill:#ff7a1a,color:#fff
+```
 
-The run executes now on local fixtures; playback is read from the append-only, hash-chained event log. MP4: [`docs/media/live-engine.mp4`](docs/media/live-engine.mp4).
-</details>
+REDEEM **never files anything for you.** It prepares, explains and guides. An outcome counts as "won" only when a supporting document shows it. Every cited rule is checked against the knowledge base, so nothing is invented.
 
-<details open>
-<summary><b>Landing, Memory Center, Privacy Center, Memory Graph</b></summary>
+---
 
-<img src="docs/screenshots/v5/landing-hero.png" alt="Landing hero" width="100%"/>
-
-| Memory Center | Privacy Center |
-|---|---|
-| <img src="docs/screenshots/v5/memory-center.png" alt="Memory Center"/> | <img src="docs/screenshots/v5/privacy.png" alt="Privacy Center"/> |
-</details>
-
-<details>
-<summary><b>More screens</b></summary>
-
-| Command Center | Cases |
-|---|---|
-| <img src="docs/screenshots/v5/console.png" alt="Command Center"/> | <img src="docs/screenshots/v5/cases.png" alt="Cases"/> |
-| **Memory Graph** | **History timeline** |
-| <img src="docs/screenshots/v5/graph.png" alt="Memory Graph"/> | <img src="docs/screenshots/v5/history.png" alt="History timeline"/> |
-| **Voice Studio** | |
-| <img src="docs/screenshots/v5/voice.png" alt="Voice Studio"/> | |
-
-Full landing page: [`docs/screenshots/v5/landing-full.png`](docs/screenshots/v5/landing-full.png)
-</details>
-
-## What is real today
-
-<details open>
-<summary><b>Feature status (generated from <code>registry/features.json</code>)</b></summary>
+## 7. What is real today
 
 <!-- FEATURES:START (generated by scripts/sync_readme.py from registry/features.json) -->
 
@@ -89,8 +188,8 @@ Full landing page: [`docs/screenshots/v5/landing-full.png`](docs/screenshots/v5/
 | Envelope encryption (AES-256-GCM): wrapped per-workspace keys, versions, DEK + KEK rotation, fail-closed in production | ✅ verified | tests/test_memory.py, tests/test_encryption.py | REDEEM |
 | KMS integration / end-to-end encryption | ⬜ not done | KEK comes from environment; server can decrypt | REDEEM |
 | PostgreSQL 16 support | ✅ verified | migrations 0001-0007, alembic check, full suite on Postgres 16 (run locally; Docker build untested) | REDEEM |
-| REDEEM identity intro (3D cubes from left/right, orange tagline), skip/replay/reduced-motion | 🟠 partial | apps/web/tests/memory.spec.ts, skills_projects.spec.ts; Bolna and Wispr Flow cubes show the official logo files | REDEEM |
-| Official Bolna / Wispr Flow / YC / WeMakeDevs logo artwork | 🟠 partial | Bolna and Wispr Flow official files embedded unmodified (apps/web/public/brand); Y Combinator and WeMakeDevs SVGs absent | REDEEM |
+| REDEEM identity intro (3D cubes from left/right, orange tagline), skip/replay/reduced-motion | 🟠 partial | apps/web/tests/memory.spec.ts, skills_projects.spec.ts; Bolna and Y Combinator cubes show the official logo files | REDEEM |
+| Official Bolna / YC / WeMakeDevs logo artwork | 🟠 partial | Bolna and Y Combinator official files embedded unmodified (apps/web/public/brand); WeMakeDevs artwork absent | REDEEM |
 | Recorded browser skills (record by doing, parameterise, replay live with pause/resume/stop) | ✅ verified | apps/api/app/resolve/skills.py, tests/test_skills_projects.py, e2e skills_projects.spec.ts; runs on the local practice apps only; repair/edit of saved steps not built | RESOLVE |
 | WebGL / three.js scenes | ⬜ not done | CSS 3D + canvas only | REDEEM |
 | Context memory: per-user conversation turns (encrypted), short follow-ups inherit the previous request's entities | ✅ verified | tests/test_context.py, apps/web/tests/context.spec.ts | REDEEM |
@@ -107,53 +206,15 @@ Full landing page: [`docs/screenshots/v5/landing-full.png`](docs/screenshots/v5/
 <!-- FEATURES:END -->
 
 Honest accounting: [`docs/FINAL_FUNCTIONAL_COMPLETION_REPORT.md`](docs/FINAL_FUNCTIONAL_COMPLETION_REPORT.md), [`docs/REAL_INTEGRATION_STATUS.md`](docs/REAL_INTEGRATION_STATUS.md), [`docs/END_TO_END_EVIDENCE.md`](docs/END_TO_END_EVIDENCE.md), [`docs/TASKS_250_STATUS.md`](docs/TASKS_250_STATUS.md).
-</details>
 
-<details>
-<summary><b>Capabilities</b></summary>
+## 8. Tests
 
-- **Missions** (one engine): `flight_recovery`, `retail_reservation`, `crm_followup`, `case_preparation`, `browser_followup`. Approvals are digest-bound; stale approvals are void; lost acknowledgements are reconciled by read-only lookup, never blindly resent; pause / resume / reject / escalate; restart recovery; persisted task DAG; least-privilege agent roles (only `executor` dispatches).
-- **Voice + memory**: Bolna agent tools `save_answer` and `recall`; spoken answers are mapped to structured fields; ambiguity yields a clarification; sensitive facts wait for your confirmation; only confirmed memory prefills later missions (recorded in the ledger as ids, not values).
-- **Context memory + history + graph**: every typed or spoken instruction and reply is stored per user (encrypted) and reused, so a short follow-up like "also move my hotel" inherits the previous request's booking; the History timeline merges missions, cases, calls, documents, memory, conversation and activity; the Memory Graph shows how they connect (derived live from your own rows; no separate graph database).
-- **Cases, evidence, knowledge**: see the RECLAIM section below.
-</details>
+Backend and browser suites are described under *Run it*. Pass counts are only recorded here from a run that was actually executed (see the line below); nothing is claimed from memory.
 
-<details>
-<summary><b>RESOLVE inheritance</b></summary>
+- **Backend (`apps/api`, pytest): 246 passed, 1 skipped, 0 failed** in 313 s, run on this branch on 2026-10-31 (SQLite).
+- Browser end-to-end (Playwright) and the web build: **not re-run for this README change**.
 
-Inherited and tested: stateful fixture web apps, real Chromium runner (fresh context, request allow-list, before/after DOM/ARIA/screenshot/API hashes, user-only-step pause), temporal guard via approval digest, file worker (dedupe/dry-run/stale-plan guard/undo), PDF studio, utterance command interpreter, persisted task DAG.
-**Not yet ported**: recorded browser skills, brief-to-PDF mission, DevOps/Science/Creative adapters, Project Store, local speech-to-text, OCR, LLM abstraction. See [`docs/FEATURE_INHERITANCE_MATRIX.md`](docs/FEATURE_INHERITANCE_MATRIX.md).
-</details>
-
-<details>
-<summary><b>RECLAIM domain workflows</b></summary>
-
-Eight domains (airline/travel, banking and payment safety, insurance, telecom, e-commerce/retail, housing, government grievance, healthcare administration), each with its own intake fields, evidence checklist, escalation ladder and knowledge coverage. A 17-stage persisted case lifecycle, BM25 retrieval with provenance and verified citations (nothing invented), document intelligence (facts to source quote/page), decision ranking with labelled assumptions, drafts bound to approvals, guided handoff (REDEEM never files for you), outcome VERIFIED only with a supporting document.
-</details>
-
-<details>
-<summary><b>Architecture and multi-agent system</b></summary>
-
-`apps/api/app/orchestration/engine.py` drives every domain; connectors expose `version_hash / snapshot / lookup / submit / verify`; roles in `agents.py` (planner, observer, specialists, executor, verifier, recovery, memory) are capability sets. Web: Next.js app router. Data: SQLAlchemy 2 + Alembic (0001–0007). Details: [`AGENTS.md`](AGENTS.md).
-</details>
-
-<details>
-<summary><b>Bolna voice and persistent memory</b></summary>
-
-- Session minting keeps the API key server-side; consent gate; call ledger; webhook confirmed by reading the execution back from Bolna. **Tested with a mock transport only; no live call has been made.**
-- Memory items are database rows with provenance (source call id, transcript line, quote), explicit-vs-inferred, confidence, status (proposed / confirmed / rejected), optional expiry, pin. Capturing from calls needs your `memory_capture` consent. Answers made without live Bolna are labelled **simulated**.
-- The mapper is rule-based (no LLM is configured): EN, Hindi/Hinglish, Tamil and Telugu terms for a fixed field registry, negation handled, unknown phrasing is never guessed.
-</details>
-
-<details>
-<summary><b>Privacy and security</b></summary>
-
-- **Envelope encryption (AES-256-GCM).** Per-workspace data keys are stored wrapped by a key-encryption key (env `REDEEM_MASTER_KEY`; previous keys in `REDEEM_MASTER_KEY_PREVIOUS`). Key ids and versions; tenant DEK rotation; KEK re-wrap; tamper and wrong-tenant detection; `REDEEM_ENV=production` refuses to start without a key. Encrypted: document bytes, extracted text, memory values and quotes. **Not encrypted at the application layer**: titles/metadata, ledger events, account email/name, the database files (use disk encryption). No KMS integration; **not end-to-end**: the server can decrypt while serving you.
-- Deleting the account deletes the workspace's keys (crypto-shredding of leftover ciphertext).
-- Tenant from the session only, an IDOR test per resource, argon2, HttpOnly cookie + CSRF, rate limits, SSRF guard, documents and web pages are data never instructions.
-</details>
-
-## Run it
+## 9. Run it
 
 ```bash
 python -m venv .venv && . .venv/bin/activate && pip install -r apps/api/requirements.txt
@@ -164,35 +225,24 @@ cd apps/api && alembic upgrade head && uvicorn app.main:app --port 8000
 cd apps/web && npm install && npm run build && npx next start -p 3000
 ```
 
-<details>
-<summary><b>Database, tests, regenerating media</b></summary>
-
-SQLite is the default. PostgreSQL 16 is verified (migrations, drift check and the full backend suite, run locally; the Docker build is untested):
+Then open `http://localhost:3000`. Press **Replay intro** on the landing page to see the intro again.
 
 ```bash
-scripts/dev_postgres.sh start
-export REDEEM_DATABASE_URL=postgresql+psycopg://postgres@127.0.0.1:5433/redeem   # database must be UTF8
+cd apps/api && python -m pytest -q
+cd apps/web && PW_CHROMIUM_PATH=/opt/pw-browsers/chromium npx playwright test
+python scripts/sync_readme.py        # refresh the generated feature table
 ```
 
-```bash
-cd apps/api && python -m pytest -q                                              # backend (240)
-cd apps/web && PW_CHROMIUM_PATH=/opt/pw-browsers/chromium npx playwright test  # browser E2E (43)
-python scripts/sync_readme.py            # refresh the generated feature table (CI runs --check)
-python scripts/build_readme_assets.py 240 43
-```
-</details>
+PostgreSQL 16 is supported (`scripts/dev_postgres.sh start`, then set `REDEEM_DATABASE_URL`). SQLite is the default.
 
-<details>
-<summary><b>Honest limits</b></summary>
+## 10. What needs your keys or is out of scope
 
-No live Bolna call; no LLM; no OCR engine; no real filing, email, airline or bank; no production browser isolation; no WebGL scene (CSS 3D + canvas); Docker build untested; no KMS; execution is synchronous; official partner logos not embedded (see above). [`docs/OPEN_BLOCKERS.md`](docs/OPEN_BLOCKERS.md) · [`docs/MANUAL_ACTIONS_LATER.md`](docs/MANUAL_ACTIONS_LATER.md) · [`docs/IMPLEMENTATION_EVIDENCE.md`](docs/IMPLEMENTATION_EVIDENCE.md)
-</details>
+- **Live Bolna calls and live Google Calendar/Gmail** need your own credentials; they have not been run live without them.
+- **No language model** is configured: the memory mapper and planners are rule-based.
+- **No real filing, email, airline or bank.** Connectors use labelled practice data.
+- No production-grade browser isolation, no KMS, no WebGL scene (CSS 3D + canvas), execution is synchronous, and the Docker build is untested.
 
-<details>
-<summary><b>Contributing, licence, notices</b></summary>
+Details: [`docs/OPEN_BLOCKERS.md`](docs/OPEN_BLOCKERS.md) · [`docs/MANUAL_ACTIONS_LATER.md`](docs/MANUAL_ACTIONS_LATER.md) · [`docs/IMPLEMENTATION_EVIDENCE.md`](docs/IMPLEMENTATION_EVIDENCE.md)
 
-Read [`AGENTS.md`](AGENTS.md) first (never fake a provider, tenant from the session only, never weaken a test, no secrets in git). Includes MIT-licensed code and data from RESOLVE and RECLAIM: [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md). Reusable UX prompt: [`docs/CINEMATIC_UX_PROMPT.md`](docs/CINEMATIC_UX_PROMPT.md).
-</details>
+## 11. For contributors
 
-## Live Computer (computer use)
-REDEEM operates a real computer: the REDEEM Computer Bridge (`apps/bridge`) captures the screen and sends real mouse/keyboard input; the server grounds targets with OCR, verifies every step and lets you pause, take over or stop. Pair a PC: `pip install ./apps/bridge` then `python -m redeem_bridge pair --server <url> --code <code>`. Details and limits: docs/REDEEM_REAL_COMPUTER_EXECUTION_REPORT.md. Static parts: docs/STATIC_TODO.md. Concept inspired by farzaa/clicky (MIT); no code copied.
