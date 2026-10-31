@@ -193,3 +193,6 @@ No live Bolna call; no LLM; no OCR engine; no real filing, email, airline or ban
 
 Read [`AGENTS.md`](AGENTS.md) first (never fake a provider, tenant from the session only, never weaken a test, no secrets in git). Includes MIT-licensed code and data from RESOLVE and RECLAIM: [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md). Reusable UX prompt: [`docs/CINEMATIC_UX_PROMPT.md`](docs/CINEMATIC_UX_PROMPT.md).
 </details>
+
+## Live Computer (computer use)
+REDEEM operates a real computer: the REDEEM Computer Bridge (`apps/bridge`) captures the screen and sends real mouse/keyboard input; the server grounds targets with OCR, verifies every step and lets you pause, take over or stop. Pair a PC: `pip install ./apps/bridge` then `python -m redeem_bridge pair --server <url> --code <code>`. Details and limits: docs/REDEEM_REAL_COMPUTER_EXECUTION_REPORT.md. Static parts: docs/STATIC_TODO.md. Concept inspired by farzaa/clicky (MIT); no code copied.
