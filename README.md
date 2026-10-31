@@ -246,4 +246,3 @@ Details: [`docs/OPEN_BLOCKERS.md`](docs/OPEN_BLOCKERS.md) · [`docs/MANUAL_ACTIO
 
 ## 11. For contributors
 
-Read [`AGENTS.md`](AGENTS.md) first (never fake a provider, tenant from the session only, never weaken a test, no secrets in git). Includes MIT-licensed code and data from RESOLVE and RECLAIM: [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).

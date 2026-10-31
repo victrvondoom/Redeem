@@ -745,3 +745,190 @@ class ProjectItem(Base):
     kind: Mapped[str] = mapped_column(String(12))  # mission | case | document
     ref_id: Mapped[str] = mapped_column(String(40))
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+
+class ComputerDevice(Base):
+    """A computer the user paired with the REDEEM Computer Bridge (mode "my_computer") or a cloud computer REDEEM started."""
+
+    __tablename__ = "computer_devices"
+    id: Mapped[str] = _id("dev")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    user_id: Mapped[str] = mapped_column(String(40))
+    name: Mapped[str] = mapped_column(String(80))
+    kind: Mapped[str] = mapped_column(String(16), default="my_computer")  # my_computer | cloud
+    platform: Mapped[str] = mapped_column(String(20), default="")
+    os_version: Mapped[str] = mapped_column(String(100), default="")
+    bridge_version: Mapped[str] = mapped_column(String(20), default="")
+    token_hash: Mapped[str] = mapped_column(String(64), index=True)
+    token_rotated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    monitors: Mapped[list] = mapped_column(JSON, default=list)
+    status: Mapped[str] = mapped_column(String(12), default="PAIRED")  # PAIRED | REVOKED
+    last_seen_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    revoked_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+
+
+class PairingCode(Base):
+    __tablename__ = "computer_pairing_codes"
+    code_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    user_id: Mapped[str] = mapped_column(String(40))
+    expires_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    used_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    device_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+
+
+class ComputerSession(Base):
+    __tablename__ = "computer_sessions"
+    id: Mapped[str] = _id("cse")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    user_id: Mapped[str] = mapped_column(String(40))
+    device_id: Mapped[str] = mapped_column(String(40), index=True)
+    mode: Mapped[str] = mapped_column(String(16))  # my_computer | cloud
+    status: Mapped[str] = mapped_column(String(12), default="ACTIVE")  # ACTIVE | PAUSED | USER_CONTROL | STOPPED | ENDED
+    control_epoch: Mapped[int] = mapped_column(Integer, default=0)  # bumped on every pause/stop/takeover; in-flight plans from an older epoch are dropped
+    expires_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    latest_frame_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    ended_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+
+
+class ComputerFrame(Base):
+    __tablename__ = "computer_frames"
+    id: Mapped[str] = _id("frm")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    session_id: Mapped[str] = mapped_column(String(40), index=True)
+    frame_no: Mapped[int] = mapped_column(Integer)
+    monitor: Mapped[int] = mapped_column(Integer, default=0)
+    origin_x: Mapped[int] = mapped_column(Integer, default=0)
+    origin_y: Mapped[int] = mapped_column(Integer, default=0)
+    width: Mapped[int] = mapped_column(Integer)
+    height: Mapped[int] = mapped_column(Integer)
+    sha256: Mapped[str] = mapped_column(String(64))
+    path: Mapped[str] = mapped_column(String(300))
+    active_window: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    cursor: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    captured_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+
+class ComputerTask(Base):
+    """One instruction (spoken through Bolna or typed) and the closed loop that carried it out."""
+
+    __tablename__ = "computer_tasks"
+    id: Mapped[str] = _id("ctk")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    session_id: Mapped[str] = mapped_column(String(40), index=True)
+    instruction: Mapped[str] = mapped_column(Text)
+    source: Mapped[str] = mapped_column(String(12), default="typed")  # typed | voice
+    call_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    intent: Mapped[dict] = mapped_column(JSON, default=dict)
+    plan: Mapped[list] = mapped_column(JSON, default=list)
+    status: Mapped[str] = mapped_column(String(20), default="PLANNING")  # PLANNING|RUNNING|NEEDS_APPROVAL|PAUSED|USER_CONTROL|DONE|FAILED|UNCERTAIN|STOPPED|NEEDS_INPUT
+    step: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    report: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    pending_approval: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    scenario_id: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True)  # catalog entry this run executes (None for free-form tasks)
+    scenario_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+
+class ComputerScenario(Base):
+    """Database-backed scenario catalog. tenant_id NULL = built-in entry visible to every workspace (read-only for tenants)."""
+
+    __tablename__ = "computer_scenarios"
+    __table_args__ = (UniqueConstraint("tenant_id", "key", name="uq_scenario_tenant_key"),)
+    id: Mapped[str] = _id("scn")
+    tenant_id: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True)
+    key: Mapped[str] = mapped_column(String(60))
+    name: Mapped[str] = mapped_column(String(120))
+    description: Mapped[str] = mapped_column(Text, default="")
+    category: Mapped[str] = mapped_column(String(40), default="general")
+    required_capabilities: Mapped[list] = mapped_column(JSON, default=list)
+    required_os: Mapped[str] = mapped_column(String(16), default="any")  # any | windows | linux | macos
+    parameter_schema: Mapped[dict] = mapped_column(JSON, default=dict)  # JSON Schema subset, validated with jsonschema
+    steps: Mapped[list] = mapped_column(JSON, default=list)  # typed operations from the approved vocabulary (app/computer/scenarios.py)
+    expected_result: Mapped[str] = mapped_column(Text, default="")
+    verification: Mapped[list] = mapped_column(JSON, default=list)
+    approvals: Mapped[list] = mapped_column(JSON, default=list)
+    executor: Mapped[str | None] = mapped_column(String(40), nullable=True)  # agent intent kind that runs it; None = not directly runnable
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_by: Mapped[str] = mapped_column(String(60), default="system")
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+
+class ComputerScenarioVersion(Base):
+    __tablename__ = "computer_scenario_versions"
+    __table_args__ = (UniqueConstraint("scenario_id", "version", name="uq_scenario_version"),)
+    id: Mapped[str] = _id("scv")
+    scenario_id: Mapped[str] = mapped_column(String(40), index=True)
+    version: Mapped[int] = mapped_column(Integer)
+    snapshot: Mapped[dict] = mapped_column(JSON)
+    changed_by: Mapped[str] = mapped_column(String(60), default="system")
+    reason: Mapped[str] = mapped_column(String(300), default="")
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+
+class PortalSubmission(Base):
+    """A submission made through the REDEEM-owned case portal (a first-party execution target, NOT an external filing)."""
+
+    __tablename__ = "portal_submissions"
+    __table_args__ = (UniqueConstraint("workspace_key", "payload_digest", name="uq_portal_payload"),)
+    id: Mapped[str] = _id("psb")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    workspace_key: Mapped[str] = mapped_column(String(40), index=True)
+    case_ref: Mapped[str] = mapped_column(String(60))
+    portal_id: Mapped[str] = mapped_column(String(40), default="redeem-case-portal")
+    form_version: Mapped[str] = mapped_column(String(10), default="1")
+    fields: Mapped[dict] = mapped_column(JSON, default=dict)
+    documents: Mapped[list] = mapped_column(JSON, default=list)
+    payload_digest: Mapped[str] = mapped_column(String(64))
+    approval_ref: Mapped[str | None] = mapped_column(String(64), nullable=True)  # digest of the computer-task approval that authorised the click
+    status: Mapped[str] = mapped_column(String(16), default="RECEIVED")
+    acknowledgement_id: Mapped[str] = mapped_column(String(24))
+    portal_response: Mapped[dict] = mapped_column(JSON, default=dict)
+    submitted_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+
+class ComputerAction(Base):
+    """Append-only record of every action sent to a computer: proposal, grounding, approval, outcome, verification."""
+
+    __tablename__ = "computer_actions"
+    id: Mapped[str] = _id("cac")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    session_id: Mapped[str] = mapped_column(String(40), index=True)
+    task_id: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True)
+    actor: Mapped[str] = mapped_column(String(8), default="agent")  # agent | user
+    action: Mapped[str] = mapped_column(String(40))
+    params: Mapped[dict] = mapped_column(JSON, default=dict)
+    reason: Mapped[str] = mapped_column(String(300), default="")
+    target: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    risk: Mapped[str] = mapped_column(String(8), default="low")
+    digest: Mapped[str] = mapped_column(String(64), default="")
+    status: Mapped[str] = mapped_column(String(14), default="PENDING")  # PENDING|SENT|DONE|FAILED|REFUSED|UNCERTAIN|BLOCKED
+    before_frame_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    after_frame_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    verification: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    error: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+
+class DemoCrmContact(Base):
+    """Synthetic records for the demo CRM web app that the computer agent operates through its UI."""
+
+    __tablename__ = "demo_crm_contacts"
+    id: Mapped[str] = _id("dcc")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    workspace_key: Mapped[str] = mapped_column(String(40), index=True)  # unguessable URL key: the controlled browser is not signed in to REDEEM
+    name: Mapped[str] = mapped_column(String(120))
+    email: Mapped[str] = mapped_column(String(200))
+    phone: Mapped[str] = mapped_column(String(40))
+    company: Mapped[str] = mapped_column(String(120))
+    preferred_contact: Mapped[str] = mapped_column(String(20), default="Email")
+    followups: Mapped[list] = mapped_column(JSON, default=list)
+    drafts: Mapped[list] = mapped_column(JSON, default=list)
+    sent: Mapped[list] = mapped_column(JSON, default=list)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)

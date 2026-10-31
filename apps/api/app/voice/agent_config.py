@@ -25,6 +25,10 @@ TOOLS = [
     _tool("interrupt", "Call immediately when the caller says stop or wait or interrupts an action. Pauses the mission so nothing stale runs.", {}, []),
     _tool("search_catalogue", "Look up products and live stock in the shop catalogue.", {"query": {**STR, "description": "Product words, e.g. keyboard."}}, ["query"]),
     _tool("lookup_booking", "Look up the status of a booking by its reference.", {"ref": {**STR, "description": "Booking reference exactly as spoken, e.g. FA2041."}}, ["ref"]),
+    _tool("computer_task", "Do a task on the caller's connected computer (REDEEM operates the real screen with mouse and keyboard). Pass the caller's request in their words.", {"instruction": {**STR, "description": "What to do on the computer."}}, ["instruction"]),
+    _tool("computer_status", "Read the progress or the final result of the current computer task. Read the 'say' field to the caller. If it has an approval, read 'describe' and ask for a clear yes.", {}, []),
+    _tool("computer_control", "Pause, continue, stop, take over (the caller wants to use the computer) or hand back control.", {"op": {**STR, "description": "pause | continue | stop | take over | hand back"}}, ["op"]),
+    _tool("computer_approve", "Approve the exact action computer_status described, only after the caller clearly said yes to it.", {"digest": {**STR, "description": "approval.digest from computer_status"}, "confirmed": {**STR, "description": "true only if the caller said yes"}}, ["digest", "confirmed"]),
     _tool("save_answer", "Save what the caller just told you (a preference or detail) to their private memory. Pass the caller's exact words, and the field you asked about if any (e.g. travel.seat_preference). If the result has ask_user, ask that question and do not save anything yet.", {"utterance": {**STR, "description": "The caller's exact words."}, "field": {**STR, "description": "Field you just asked about, if any."}}, ["utterance"]),
     _tool("recall", "Read the caller's CONFIRMED saved preferences relevant to a topic, so you do not ask again.", {"topic": {**STR, "description": "e.g. flight refund."}}, []),
 ]
