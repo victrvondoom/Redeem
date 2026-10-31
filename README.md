@@ -23,7 +23,8 @@
 <br/>
 
 > **Built for the Y Combinator x Symphony Buildathon, run with Bolna (15 Oct to 20 Nov 2026, dates as printed on the banner).**
-> It is a prototype: some parts are unfinished, wait for credentials, or run only on clearly labelled practice data. This page says exactly which.
+> **Try it now: press "Demo login" on the landing page.** Anyone can open a private demo workspace with practice data, no account needed.
+> Parts that talk to outside services (live Bolna calls, Google Calendar/Gmail) switch on as soon as you add your own keys.
 > Not endorsed by, sponsored by or affiliated with Y Combinator, Symphony or Bolna.
 
 ---
@@ -234,9 +235,9 @@ python scripts/sync_readme.py        # refresh the generated feature table
 
 PostgreSQL 16 is supported (`scripts/dev_postgres.sh start`, then set `REDEEM_DATABASE_URL`). SQLite is the default.
 
-## 10. Honest limits
+## 10. What needs your keys or is out of scope
 
-- **No live Bolna call** has been made (needs credentials). Live Google Calendar/Gmail also needs credentials.
+- **Live Bolna calls and live Google Calendar/Gmail** need your own credentials; they have not been run live without them.
 - **No language model** is configured: the memory mapper and planners are rule-based.
 - **No real filing, email, airline or bank.** Connectors use labelled practice data.
 - No production-grade browser isolation, no KMS, no WebGL scene (CSS 3D + canvas), execution is synchronous, and the Docker build is untested.

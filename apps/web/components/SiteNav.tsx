@@ -1,4 +1,5 @@
 "use client";
+import { DemoLogin } from "./DemoLogin";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
@@ -20,6 +21,7 @@ export function SiteNav() {
           <LangSwitcher className="hidden sm:inline-flex" />
           {me ? <Link href="/app" className="btn-primary">Open console</Link> : (<>
             <Link href="/login" className="btn-ghost hidden sm:inline-flex">{t("nav.signin")}</Link>
+            {!me && <span className="hidden sm:inline-flex"><DemoLogin className="btn-ghost" label="Demo login" /></span>}
             <Link href="/register" className="btn-primary">{t("nav.start")}</Link></>)}
         </div>
       </div>

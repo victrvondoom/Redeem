@@ -46,7 +46,7 @@ main { overflow-x: clip; }
 .scene { perspective: 1400px; perspective-origin: 50% 40%; }
 .preserve { transform-style: preserve-3d; }
 .rings { position: absolute; inset: 0; pointer-events: none; background: repeating-radial-gradient(circle at 92% -6%, rgb(var(--green) / .26) 0 2px, rgb(var(--green-deep) / .14) 2px 30px, transparent 30px 58px); -webkit-mask-image: radial-gradient(circle at 92% -6%, #000 0%, transparent 62%); mask-image: radial-gradient(circle at 92% -6%, #000 0%, transparent 62%); }
-.pixel { font-family: var(--font-display); font-weight: 400; letter-spacing: -.01em; filter: url(#pixelate); }
+.pixel { font-family: "Manrope", system-ui, Arial, sans-serif; font-weight: 800; letter-spacing: -.02em; }
 .grid-floor { position: absolute; inset: auto 0 0 0; height: 45%; transform: perspective(600px) rotateX(62deg); transform-origin: bottom; background-image: linear-gradient(rgb(var(--green) / .16) 1px, transparent 1px), linear-gradient(90deg, rgb(var(--green) / .16) 1px, transparent 1px); background-size: 56px 56px; -webkit-mask-image: linear-gradient(to top, #000 10%, transparent 85%); mask-image: linear-gradient(to top, #000 10%, transparent 85%); }
 .rise { opacity: 0; transform: translateY(26px); animation: rise .9s cubic-bezier(.16,1,.3,1) forwards; animation-play-state: paused; }
 html[data-go] .rise { animation-play-state: running; }
@@ -81,7 +81,7 @@ html[data-go] .rise { animation-play-state: running; }
 @keyframes emblem-in { to { opacity: 1; transform: scale(1) rotateY(0); } }
 @keyframes emblem-up { to { transform: translateY(-120px) scale(.55); opacity: 0; } }
 .intro-title { position: absolute; left: 0; right: 0; top: 46%; text-align: center; padding: 0 16px; }
-.intro-name { display: flex; justify-content: center; font-family: var(--font-display); font-weight: 400; letter-spacing: -.03em; line-height: 1.05; font-size: clamp(3.4rem, 13vw, 9.5rem); color: rgb(var(--ink)); perspective: 800px; }
+.intro-name { display: flex; justify-content: center; font-family: "Manrope", system-ui, Arial, sans-serif; font-weight: 800; letter-spacing: -.02em; line-height: 1.05; font-size: clamp(3.4rem, 13vw, 9.5rem); color: rgb(var(--ink)); perspective: 800px; }
 .intro-name span { display: inline-block; opacity: 0; transform: translateY(40px) rotateX(-70deg); animation: letter-in .7s cubic-bezier(.16,1,.3,1) forwards; }
 @keyframes letter-in { to { opacity: 1; transform: none; } }
 .intro-tag { margin-top: 1.1rem; font-weight: 700; font-size: clamp(.95rem, 2.4vw, 1.5rem); color: rgb(var(--accent)); opacity: 0; animation: tag-in .8s ease 3s forwards; }
