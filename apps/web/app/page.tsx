@@ -32,11 +32,11 @@ export default function Landing() {
       <SiteNav />
       <main id="main">
         <section id="product" className="relative overflow-hidden">
-          <Starfield /><div className="grid-floor" aria-hidden="true" />
+          <div className="rings" aria-hidden="true" /><Starfield /><div className="grid-floor" aria-hidden="true" />
           <div className="relative mx-auto grid max-w-6xl items-center gap-6 px-4 pb-16 pt-14 sm:px-6 sm:pt-24 lg:grid-cols-[1.15fr_1fr]">
             <div className="rise">
               <p className="h-eyebrow">{t("hero.eyebrow")}</p>
-              <h1 className="mt-4 text-[2.7rem] font-extrabold leading-[1.02] tracking-tighter sm:text-7xl">{t("hero.title1")}<br /><span className="glow-text">{t("hero.title2")}</span></h1>
+              <h1 className="pixel mt-4 text-[2.9rem] font-normal leading-[1.02] tracking-tight sm:text-7xl">{t("hero.title1")}<br /><span className="glow-text">{t("hero.title2")}</span></h1>
               <p className="mt-6 max-w-xl text-lg text-muted">{t("hero.sub")}</p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row"><a href="#start" className="btn-primary">{t("hero.cta1")}</a><a href="#watch" className="btn-ghost">Watch the engine</a></div>
               <p className="mt-5 text-sm font-semibold tracking-wide text-muted">One voice. Every domain. Verified outcomes.</p>

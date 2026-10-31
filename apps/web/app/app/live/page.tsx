@@ -90,7 +90,7 @@ export default function Live() {
                 return <path key={`${d}-${t.id}`} d={`M${a.x + 140} ${a.y + 24} C ${a.x + 150} ${a.y + 24}, ${b.x - 10} ${b.y + 24}, ${b.x} ${b.y + 24}`} fill="none" stroke={on ? "rgb(255 122 26)" : "rgb(52 47 44)"} strokeWidth={on ? 2 : 1} style={{ filter: on ? "drop-shadow(0 0 4px rgb(255 122 26))" : undefined, transition: "all .4s" }} />; }))}
               {tasks.map((t) => { const p = g.pos[t.id], s = state(t); return (
                 <g key={t.id} transform={`translate(${p.x},${p.y})`}><g className={s !== "idle" ? "node-pop" : ""} style={{ transformBox: "fill-box", transformOrigin: "center" }}>
-                  <rect width="140" height="48" rx="11" fill={s === "done" ? "rgb(56 28 8)" : "rgb(22 20 19)"} stroke={s === "idle" ? "rgb(52 47 44)" : "rgb(255 122 26)"} strokeWidth={s === "active" ? 2 : 1} style={{ filter: s === "active" ? "drop-shadow(0 0 10px rgb(255 122 26))" : undefined }} />
+                  <rect width="140" height="48" rx="11" fill={s === "done" ? "rgb(8 44 22)" : s === "active" ? "rgb(52 26 8)" : "rgb(9 14 11)"} stroke={s === "idle" ? "rgb(34 52 41)" : s === "done" ? "rgb(52 211 102)" : "rgb(255 122 26)"} strokeWidth={s === "active" ? 2 : 1} style={{ filter: s === "active" ? "drop-shadow(0 0 10px rgb(255 122 26))" : undefined }} />
                   <text x="10" y="20" fontSize="12" fontWeight="700" fill={s === "idle" ? "rgb(160 152 146)" : "rgb(240 236 232)"}>{t.kind.length > 17 ? t.kind.slice(0, 16) + "…" : t.kind}</text>
                   <text x="10" y="37" fontSize="10" fill="rgb(160 152 146)">{t.owner} · {s === "done" ? "verified ✓" : s === "active" ? "working…" : "waiting"}</text>
                 </g></g>); })}

@@ -9,6 +9,7 @@ from ..core.deps import Ctx, audit, current_ctx, err
 from ..db import utcnow
 from ..evidence import center
 from ..models import AuditEvent, Connection, Mission
+from ..memory import context as ctx_memory
 from ..orchestration import engine, utterance
 from ..resolve import browser as rb
 from ..models import BrowserSessionRow, BrowserSnapshot
@@ -165,6 +166,7 @@ def funnel(ctx: Ctx = Depends(current_ctx)):
 def mission_utterance(mission_id: str, body: UtteranceIn, ctx: Ctx = Depends(current_ctx)):
     m = _get(ctx, mission_id)
     audit(ctx.db, ctx, "mission.utterance", mission_id)
+    ctx_memory.record(ctx.db, ctx, "command", "user", body.text, mission_id)
     try:
         res = utterance.apply(ctx.db, m, body.text)
     except engine.EngineError as e:

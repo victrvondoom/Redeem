@@ -1,8 +1,10 @@
+import re
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import delete, select
 
 from ..core.deps import Ctx, audit, current_ctx, err
-from ..memory import extract, service
+from ..memory import context, extract, service
 from ..models import Call, ConsentRecord, MemoryItem
 from ..schemas import MemoryIngestIn, MemoryPatchIn
 
@@ -44,6 +46,9 @@ def ingest(body: MemoryIngestIn, ctx: Ctx = Depends(current_ctx)):
     elif body.fixture:
         kind = "bolna_fixture"
     r = service.ingest(ctx.db, ctx, body.utterance, body.expected_field, kind, ref, body.segment, body.retention_days)
+    context.record(ctx.db, ctx, "voice" if kind == "bolna_call" else "memory", "user", body.utterance, ref)
+    if r["clarification"]:
+        context.record(ctx.db, ctx, "voice" if kind == "bolna_call" else "memory", "assistant", r["clarification"], ref)
     audit(ctx.db, ctx, "memory.ingest", None, {"fields": [s["field"] for s in r["saved"]], "source": kind})
     ctx.db.commit()
     return r
@@ -64,6 +69,10 @@ def from_call(call_id: str, ctx: Ctx = Depends(current_ctx)):
         raise err(404, "not_found", "No such call")
     if not _consented(ctx):
         raise err(403, "consent_required", "Grant memory-capture consent first")
+    for i, line in enumerate((call.transcript or "").splitlines(), 1):
+        mm = re.match(r"\s*(user|human|customer|caller|assistant|agent|bot)\s*[:\-]\s*(.+)", line, re.I)
+        if mm:
+            context.record(ctx.db, ctx, "voice", "user" if mm.group(1).lower() in ("user", "human", "customer", "caller") else "assistant", mm.group(2), call.id, i)
     saved = service.ingest_transcript(ctx.db, ctx, call)
     audit(ctx.db, ctx, "memory.from_call", call_id, {"count": len(saved)})
     ctx.db.commit()

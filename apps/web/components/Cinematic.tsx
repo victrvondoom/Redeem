@@ -20,7 +20,7 @@ export function Starfield({ className = "" }: { className?: string }) {
         const x = w / 2 + (s.x + mx * 0.06) * k * w * 0.12, y = h / 2 + (s.y + my * 0.06) * k * h * 0.12;
         if (x < 0 || x > w || y < 0 || y > h) continue;
         const a = Math.min(1, (1 - s.z) * 1.4), r = Math.max(0.4, (1 - s.z) * 2.4);
-        ctx.beginPath(); ctx.fillStyle = `rgba(255,170,110,${a * 0.85})`; ctx.shadowColor = "rgba(255,122,26,.9)"; ctx.shadowBlur = r * 4;
+        ctx.beginPath(); ctx.fillStyle = `rgba(120,255,170,${a * 0.8})`; ctx.shadowColor = "rgba(52,211,102,.9)"; ctx.shadowBlur = r * 4;
         ctx.arc(x, y, r, 0, 6.283); ctx.fill();
       }
       if (!reduce) raf = requestAnimationFrame(draw);
@@ -78,7 +78,8 @@ export function CountUp({ to, ms = 1400 }: { to: number; ms?: number }) {
 
 /** Partner logo slot. Shows ONLY an official asset placed in /public/brand/<file>; if the file is absent it shows the partner's name as plain text (never a redrawn logo). */
 function LogoPlate({ file, name }: { file: string; name: string }) {
-  const [ok, setOk] = useState(true);
+  const [ok, setOk] = useState(false);
+  useEffect(() => { fetch("/brand/manifest.json").then((r) => (r.ok ? r.json() : { files: [] })).then((m: { files: string[] }) => setOk(m.files.includes(file))).catch(() => setOk(false)); }, [file]);
   return (
     <span className="grid h-full w-full place-items-center rounded-[14%] bg-[#f3efe9] p-[14%] text-[#1a1614]">
       {ok ? // eslint-disable-next-line @next/next/no-img-element
@@ -133,7 +134,7 @@ export function Intro() {
         <div className="intro-emblem"><span>R</span></div>
       </div>
       <div className="intro-title">
-        <p className="intro-name" aria-label="REDEEM">{"REDEEM".split("").map((c, i) => <span key={i} style={{ animationDelay: `${2.15 + i * 0.07}s` }}>{c}</span>)}</p>
+        <p className="intro-name pixel" aria-label="REDEEM">{"REDEEM".split("").map((c, i) => <span key={i} style={{ animationDelay: `${2.15 + i * 0.07}s` }}>{c}</span>)}</p>
         <p className="intro-tag">Speak Your Need. We Take the Lead.</p>
       </div>
       <button className="intro-skip" onClick={finish}>Skip intro <kbd>Esc</kbd></button>

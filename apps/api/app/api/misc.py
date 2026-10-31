@@ -19,9 +19,10 @@ from ..models import (Action, ActionApproval, ActionEvent, AuditEvent, AuthSessi
 from ..models import FxCalendarEvent, FxCase, FxContact, FxFlightOption, FxLead, FxMessage
 from ..policy.payment_safety import scan
 from ..reclaim import docintel
+from ..memory import context as ctx_context
 from ..memory import service as service_memory
 from ..security import vault
-from ..models import EncryptionKey, MemoryItem
+from ..models import ConversationTurn, EncryptionKey, MemoryItem
 from ..models import BenchmarkRun, BrowserSessionRow, BrowserSnapshot, Case, CaseDraft, CaseEvent, EvidenceClaim, MissionTask
 from ..schemas import ScanIn
 
@@ -257,6 +258,7 @@ def export(ctx: Ctx = Depends(current_ctx)):
         "calls": [{"id": c.id, "status": c.status, "transcript": c.transcript}
                   for c in db.scalars(select(Call).where(Call.tenant_id == t))],
         "memory": service_memory.listing(db, ctx),
+        "conversation_context": ctx_context.recent(db, ctx, 200),
         "encryption": vault.status(db, t),
         "consents": [{"purpose": c.purpose, "granted": c.granted, "at": c.created_at.isoformat()}
                      for c in db.scalars(select(ConsentRecord).where(ConsentRecord.tenant_id == t))],
@@ -266,7 +268,7 @@ def export(ctx: Ctx = Depends(current_ctx)):
 def _purge_tenant(db, t: str) -> None:
     for model in (BenchmarkRun, CallEvent, VerificationClaim, BrowserSnapshot, BrowserSessionRow, MissionTask, ProviderOperation, ActionApproval, ActionEvent, Action,
                   MissionRevision, Mission, Document, Call, ConsentRecord, FxFault, FxRequest, FxReservation,
-                  FxBooking, FxProduct, FxCustomer, FxCalendarEvent, FxLead, FxCase, FxContact, FxMessage, FxFlightOption, RegSource, Connection, CaseEvent, CaseDraft, EvidenceClaim, Case, MemoryItem):
+                  FxBooking, FxProduct, FxCustomer, FxCalendarEvent, FxLead, FxCase, FxContact, FxMessage, FxFlightOption, RegSource, Connection, CaseEvent, CaseDraft, EvidenceClaim, Case, MemoryItem, ConversationTurn):
         db.execute(delete(model).where(model.tenant_id == t))
     db.execute(delete(EncryptionKey).where(EncryptionKey.scope == t))  # crypto-shredding: remaining ciphertext copies become unreadable
 

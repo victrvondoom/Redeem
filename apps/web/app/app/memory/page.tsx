@@ -6,6 +6,7 @@ import { api, ApiError } from "@/lib/api";
 type Item = { id: string; category: string; field: string; label: string; value: string; source_kind: string; source_ref: string | null; segment: string | null; explicit: boolean; confidence: number;
   status: "proposed" | "confirmed" | "rejected"; pinned: boolean; quote: string | null; simulated: boolean; expires_at: string | null; updated_at: string };
 type Field = { field: string; category: string; label: string; sensitive: boolean; question: string; options: string[] };
+type Turn = { id: string; channel: string; role: string; text: string; at: string; ref_id: string | null };
 type Resp = { items: Item[]; capture_consent: boolean; fields: Field[] };
 type Ingest = { saved: Item[]; ambiguous: boolean; clarification: string | null; unmapped: boolean; needs_confirmation: string[] };
 
@@ -22,9 +23,10 @@ export default function MemoryCenter() {
   const [note, setNote] = useState<string | null>(null);
   const [edit, setEdit] = useState<{ id: string; v: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [turns, setTurns] = useState<Turn[] | null>(null);
 
   const load = useCallback(async () => {
-    try { const p = new URLSearchParams(); if (q) p.set("q", q); if (cat) p.set("category", cat); setData(await api<Resp>(`/memory?${p}`)); setError(null); }
+    try { const p = new URLSearchParams(); if (q) p.set("q", q); if (cat) p.set("category", cat); setData(await api<Resp>(`/memory?${p}`)); setTurns((await api<{ turns: Turn[] }>("/context?limit=40")).turns); setError(null); }
     catch (e) { setError(e instanceof ApiError ? e.message : "Could not load memory"); }
   }, [q, cat]);
   useEffect(() => { const t = setTimeout(() => void load(), 200); return () => clearTimeout(t); }, [load]);
@@ -88,6 +90,13 @@ export default function MemoryCenter() {
               <button className="btn-ghost !min-h-[40px] text-danger" disabled={busy} onClick={() => void act(() => api(`/memory/${m.id}`, { method: "DELETE" }))}>Delete</button>
             </div></li>))}</ul>
         {data && data.items.length > 0 && cat && <button className="btn-ghost text-danger" disabled={busy} onClick={() => { if (confirm(`Delete every saved ${cat} item?`)) void act(() => api(`/memory?category=${cat}`, { method: "DELETE" })); }}>Delete all “{cat}” memory</button>}
+      </section>
+      <section className="card" aria-labelledby="ctx-h">
+        <div className="flex flex-wrap items-center justify-between gap-3"><h2 id="ctx-h" className="text-lg font-bold">Conversation context</h2>
+          <button className="btn-ghost text-danger" disabled={busy || !turns?.length} onClick={() => { if (confirm("Forget your saved conversation context?")) void act(() => api("/context", { method: "DELETE" })); }}>Forget context</button></div>
+        <p className="mt-1 text-sm text-muted">What you and REDEEM said, per mission or call, kept so short follow-ups (“also move my hotel”) keep their context. Encrypted at rest; only you can see it.</p>
+        {turns && turns.length === 0 && <p className="mt-3 text-sm text-muted">Nothing yet. Start a mission and it appears here.</p>}
+        <ol className="mt-3 max-h-80 space-y-1.5 overflow-y-auto" aria-label="Conversation turns">{turns?.map((t) => (<li key={t.id} className={`rounded-xl px-3 py-2 text-sm ${t.role === "user" ? "bg-soft" : "border border-line"}`}><span className="mr-2 text-xs font-bold uppercase tracking-wider text-teal">{t.role === "user" ? "You" : "REDEEM"} · {t.channel}</span>{t.text}</li>))}</ol>
       </section>
     </div>
   );

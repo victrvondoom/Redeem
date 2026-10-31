@@ -30,7 +30,7 @@ test("REDEEM identity intro: exact name and orange tagline, skippable, replayabl
 
 test("Memory Center: map a spoken answer, ask for clarification, confirm sensitive data, correct and delete", async ({ page }) => {
   await register(page);
-  await page.getByRole("link", { name: "Memory" }).click();
+  await page.getByRole("link", { name: "Memory", exact: true }).click();
   await page.getByLabel("Question that was asked").selectOption("travel.seat_preference");
   await page.getByLabel(/The answer/).fill("window seat please");
   await page.getByRole("button", { name: "Map and save" }).click();

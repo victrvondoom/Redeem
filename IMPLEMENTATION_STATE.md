@@ -23,3 +23,6 @@ Backend 199 passed; Playwright 35 passed. New: Live Engine page, cinematic landi
 
 ## 250-task pass (latest)
 Backend 217 passed, E2E 38. Added: orange/graphite theme, REDEEM intro (Bolna + Wispr Flow cubes; official logos blocked), envelope encryption with rotation, persistent encrypted memory + Memory Center, Privacy Center, Bolna save_answer/recall tools, README rewrite + generated feature table + CI. See docs/TASKS_250_STATUS.md for what is NOT done.
+
+## Context/graph/history + theme pass (latest)
+Backend 222, E2E 40. New: conversation_turns (0008), /timeline, /context, /graph, History timeline tab, Memory Graph page, Conversation context panel, black+green+orange theme, Gloock pixel display font. README now carries the Buildathon banner and an honest "many features do not work" statement.

@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Empty, ErrorNote, PageTitle, Tag } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
@@ -101,6 +102,9 @@ export default function VoiceStudio() {
             <button className="btn-ghost" disabled={!c.execution_id} onClick={() => void sync(c.id)}>Refresh from Bolna</button></div>
             {c.transcript && <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{c.transcript}</p>}</li>))}</ul>)}
       </section>
+      <section className="card" aria-labelledby="vm-h"><h2 id="vm-h" className="text-lg font-bold">Voice memory</h2>
+        <p className="mt-1 text-sm text-muted">Answers you give on a Bolna call can be mapped to your private memory (seat, meal, contact method, language…). Sensitive items wait for your confirmation, and only confirmed memory is used in later missions.</p>
+        <div className="mt-3 flex flex-wrap gap-3"><Link className="btn-primary" href="/app/memory">Open Memory Center</Link><Link className="btn-ghost" href="/app/graph">See Memory Graph</Link><Link className="btn-ghost" href="/app/history">Conversation history</Link></div></section>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Empty, ErrorNote, PageTitle, StatusBadge, Tag } from "@/components/ui";
 import { Tabs } from "@/components/viz";
+import { TimelineTab } from "@/components/Timeline";
 import { api } from "@/lib/api";
 import { inr, when } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
@@ -14,7 +15,7 @@ const DOMAINS = ["", "travel", "retail", "banking", "consumer_rights", "crm", "t
 
 export default function History() {
   const { lang } = useI18n();
-  const [tab, setTab] = useState("missions");
+  const [tab, setTab] = useState("timeline");
   const [q, setQ] = useState(""); const [status, setStatus] = useState(""); const [domain, setDomain] = useState(""); const [page, setPage] = useState(0);
   const [rows, setRows] = useState<Row[] | null>(null); const [total, setTotal] = useState(0); const [crows, setCrows] = useState<CRow[] | null>(null); const [ctotal, setCtotal] = useState(0); const [error, setError] = useState<string | null>(null);
   const LIMIT = 10;
@@ -27,11 +28,18 @@ export default function History() {
     return () => clearTimeout(h);
   }, [tab, q, status, domain, page]);
   const n = tab === "missions" ? total : ctotal;
+  if (tab === "timeline") return (
+    <div className="mx-auto max-w-4xl space-y-6">
+      <PageTitle title="History" sub="Everything you have done with REDEEM, stored per account and searchable: missions, cases, calls, documents, memory, conversation and activity." />
+      <Tabs value={tab} onChange={(t) => setTab(t)} tabs={[{ id: "timeline", label: "Timeline" }, { id: "missions", label: "Missions" }, { id: "cases", label: "Cases" }]} />
+      <TimelineTab />
+    </div>
+  );
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <PageTitle title="History" sub="Every mission and case, searchable and persistent. Open one to see its timeline, evidence and report." />
       <ErrorNote error={error} />
-      <Tabs value={tab} onChange={(t) => { setTab(t); setPage(0); }} tabs={[{ id: "missions", label: "Missions", count: tab === "missions" ? total : undefined }, { id: "cases", label: "Cases", count: tab === "cases" ? ctotal : undefined }]} />
+      <Tabs value={tab} onChange={(t) => { setTab(t); setPage(0); }} tabs={[{ id: "timeline", label: "Timeline" }, { id: "missions", label: "Missions", count: tab === "missions" ? total : undefined }, { id: "cases", label: "Cases", count: tab === "cases" ? ctotal : undefined }]} />
       <div className="grid gap-3 sm:grid-cols-3"><div><label className="label" htmlFor="q">Search</label><input id="q" className="input" value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} /></div>
         {tab === "missions" && (<><div><label className="label" htmlFor="st">Status</label><select id="st" className="input" value={status} onChange={(e) => { setStatus(e.target.value); setPage(0); }}>{STATUSES.map((s) => <option key={s} value={s}>{s ? s.replaceAll("_", " ").toLowerCase() : "All"}</option>)}</select></div>
           <div><label className="label" htmlFor="dm">Domain</label><select id="dm" className="input" value={domain} onChange={(e) => { setDomain(e.target.value); setPage(0); }}>{DOMAINS.map((s) => <option key={s} value={s}>{s || "All"}</option>)}</select></div></>)}</div>

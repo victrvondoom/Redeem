@@ -6,6 +6,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 
 from ..config import settings
+from ..memory import context as ctx_memory
 from ..memory import service as service_memory
 from ..core.deps import Ctx, audit, current_ctx, err
 from ..core.security import limiter
@@ -53,6 +54,11 @@ def create(body: MissionIn, ctx: Ctx = Depends(current_ctx)):
             engine.emit(ctx.db, m, "ENTITY_BOUND", {"role": "booking_id", "id": hits[0].id,
                                                     "via": f"document:{doc.id}@v{doc.version}",
                                                     "document_sha256": doc.sha256})
+    prev = ctx_memory.resolve_followup(ctx.db, ctx, body.intent, m.id)
+    if prev and not m.bindings:
+        m.bindings = dict(prev.bindings)
+        engine.emit(ctx.db, m, "CONTEXT_USED", {"from_mission": prev.id, "bindings": list(prev.bindings), "note": "Short follow-up: entities carried over from your previous request."})
+    ctx_memory.record(ctx.db, ctx, "mission", "user", body.intent, m.id)
     audit(ctx.db, ctx, "mission.create", m.id)
     used = service_memory.relevant(ctx.db, ctx, body.intent)
     if used:  # only confirmed, relevant memory; values stay out of the ledger (ids and fields only)
@@ -62,7 +68,11 @@ def create(body: MissionIn, ctx: Ctx = Depends(current_ctx)):
         engine.start_mission(ctx.db, m, body.transcript_confidence if body.source == "voice" else None)
     finally:
         ctx.db.commit()
-    return engine.mission_view(ctx.db, m) | {"memory_used": used}
+    view = engine.mission_view(ctx.db, m)
+    plan = view.get("plan") or {}
+    ctx_memory.record(ctx.db, ctx, "mission", "assistant", f"Status {m.status}. {len(plan.get('actions', []))} proposed action(s)." if plan else f"Status {m.status}.", m.id)
+    ctx.db.commit()
+    return view | {"memory_used": used}
 
 
 @router.get("")

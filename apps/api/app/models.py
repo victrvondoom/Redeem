@@ -628,3 +628,18 @@ class MemoryItem(Base):
     expires_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+
+class ConversationTurn(Base):
+    """Per-user conversation context: every typed/spoken instruction and REDEEM reply, encrypted, so follow-ups keep their context."""
+    __tablename__ = "conversation_turns"
+    __table_args__ = (Index("ix_turn_user_time", "tenant_id", "user_id", "created_at"), UniqueConstraint("tenant_id", "channel", "ref_id", "idx"))
+    id: Mapped[str] = _id("trn")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    user_id: Mapped[str] = mapped_column(String(40))
+    channel: Mapped[str] = mapped_column(String(12))  # mission | voice | memory | command
+    ref_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    idx: Mapped[int] = mapped_column(Integer, default=0)  # position inside ref (e.g. transcript line); 0 for single turns
+    role: Mapped[str] = mapped_column(String(10))  # user | assistant
+    text_enc: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)

@@ -54,7 +54,7 @@ export function Tag({ children, tone = "soft" }: { children: ReactNode; tone?: "
 }
 
 export function PageTitle({ title, sub }: { title: string; sub?: string }) {
-  return (<header className="mb-6"><h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{title}</h1>{sub && <p className="mt-1 max-w-2xl text-muted">{sub}</p>}</header>);
+  return (<header className="mb-6"><h1 className="text-3xl font-normal tracking-tight sm:text-4xl">{title}</h1>{sub && <p className="mt-1 max-w-2xl text-muted">{sub}</p>}</header>);
 }
 
 export function Empty({ title, children }: { title: string; children?: ReactNode }) {

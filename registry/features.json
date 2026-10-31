@@ -1,20 +1,138 @@
 {
-  "_note": "Single source of truth for the README feature table. status: verified (test evidence) | partial | blocked (needs external access) | not_done. Edit here, then run: python scripts/sync_readme.py",
-  "features": [
-    {"id": "mission-engine", "name": "Mission engine: digest-bound approvals, hash-chained ledger, reconcile-not-resend, recovery", "status": "verified", "evidence": "apps/api/tests (217 backend tests)", "source": "REDEEM"},
-    {"id": "reclaim-cases", "name": "8 consumer-rights domains, 17-stage case lifecycle, citations, document intelligence", "status": "verified", "evidence": "tests/test_reclaim.py, tests/inherit.spec.ts", "source": "RECLAIM"},
-    {"id": "resolve-browser", "name": "Real Chromium on fixture apps: snapshots, temporal guard, user-only steps", "status": "verified", "evidence": "tests/test_resolve.py", "source": "RESOLVE"},
-    {"id": "live-engine", "name": "Live Engine: real run replayed from the stored ledger", "status": "verified", "evidence": "apps/web/tests/cinematic.spec.ts", "source": "REDEEM"},
-    {"id": "memory", "name": "Persistent encrypted memory with provenance, confirmation, correction, deletion, retention", "status": "verified", "evidence": "tests/test_memory.py, apps/web/tests/memory.spec.ts", "source": "REDEEM"},
-    {"id": "voice-memory-mapping", "name": "Spoken answer -> structured field mapper (rule-based; EN/HI/Hinglish/TA/TE terms) with clarification on ambiguity", "status": "verified", "evidence": "tests/test_memory.py", "source": "REDEEM"},
-    {"id": "bolna-live", "name": "Live Bolna calls", "status": "blocked", "evidence": "adapter + contract tests with mock transport only; needs Bolna credentials", "source": "REDEEM"},
-    {"id": "envelope-encryption", "name": "Envelope encryption (AES-256-GCM): wrapped per-workspace keys, versions, DEK + KEK rotation, fail-closed in production", "status": "verified", "evidence": "tests/test_memory.py, tests/test_encryption.py", "source": "REDEEM"},
-    {"id": "kms", "name": "KMS integration / end-to-end encryption", "status": "not_done", "evidence": "KEK comes from environment; server can decrypt", "source": "REDEEM"},
-    {"id": "postgres", "name": "PostgreSQL 16 support", "status": "verified", "evidence": "migrations 0001-0007, alembic check, full suite on Postgres 16 (run locally; Docker build untested)", "source": "REDEEM"},
-    {"id": "intro", "name": "REDEEM identity intro (3D cubes from left/right, orange tagline), skip/replay/reduced-motion", "status": "partial", "evidence": "apps/web/tests/memory.spec.ts; partner cubes show names because official logos could not be fetched", "source": "REDEEM"},
-    {"id": "brand-logos", "name": "Official Bolna / Wispr Flow / YC / WeMakeDevs logo artwork", "status": "blocked", "evidence": "sandbox cannot reach the official sites; drop files into apps/web/public/brand/", "source": "REDEEM"},
-    {"id": "browser-skills", "name": "Recorded browser skills (record, edit, parameterise, replay, repair)", "status": "not_done", "evidence": "not ported from RESOLVE", "source": "RESOLVE"},
-    {"id": "other-adapters", "name": "Brief-to-PDF, DevOps, Science, Creative adapters; Project Store; OCR; LLM abstraction; local STT", "status": "not_done", "evidence": "not ported; see docs/TASKS_250_STATUS.md", "source": "RESOLVE"},
-    {"id": "webgl", "name": "WebGL / three.js scenes", "status": "not_done", "evidence": "CSS 3D + canvas only", "source": "REDEEM"}
-  ]
+ "_note": "Single source of truth for the README feature table. status: verified (test evidence) | partial | blocked (needs external access) | not_done. Edit here, then run: python scripts/sync_readme.py",
+ "features": [
+  {
+   "id": "mission-engine",
+   "name": "Mission engine: digest-bound approvals, hash-chained ledger, reconcile-not-resend, recovery",
+   "status": "verified",
+   "evidence": "apps/api/tests (222 backend tests)",
+   "source": "REDEEM"
+  },
+  {
+   "id": "reclaim-cases",
+   "name": "8 consumer-rights domains, 17-stage case lifecycle, citations, document intelligence",
+   "status": "verified",
+   "evidence": "tests/test_reclaim.py, tests/inherit.spec.ts",
+   "source": "RECLAIM"
+  },
+  {
+   "id": "resolve-browser",
+   "name": "Real Chromium on fixture apps: snapshots, temporal guard, user-only steps",
+   "status": "verified",
+   "evidence": "tests/test_resolve.py",
+   "source": "RESOLVE"
+  },
+  {
+   "id": "live-engine",
+   "name": "Live Engine: real run replayed from the stored ledger",
+   "status": "verified",
+   "evidence": "apps/web/tests/cinematic.spec.ts",
+   "source": "REDEEM"
+  },
+  {
+   "id": "memory",
+   "name": "Persistent encrypted memory with provenance, confirmation, correction, deletion, retention",
+   "status": "verified",
+   "evidence": "tests/test_memory.py, apps/web/tests/memory.spec.ts",
+   "source": "REDEEM"
+  },
+  {
+   "id": "voice-memory-mapping",
+   "name": "Spoken answer -> structured field mapper (rule-based; EN/HI/Hinglish/TA/TE terms) with clarification on ambiguity",
+   "status": "verified",
+   "evidence": "tests/test_memory.py",
+   "source": "REDEEM"
+  },
+  {
+   "id": "bolna-live",
+   "name": "Live Bolna calls",
+   "status": "blocked",
+   "evidence": "adapter + contract tests with mock transport only; needs Bolna credentials",
+   "source": "REDEEM"
+  },
+  {
+   "id": "envelope-encryption",
+   "name": "Envelope encryption (AES-256-GCM): wrapped per-workspace keys, versions, DEK + KEK rotation, fail-closed in production",
+   "status": "verified",
+   "evidence": "tests/test_memory.py, tests/test_encryption.py",
+   "source": "REDEEM"
+  },
+  {
+   "id": "kms",
+   "name": "KMS integration / end-to-end encryption",
+   "status": "not_done",
+   "evidence": "KEK comes from environment; server can decrypt",
+   "source": "REDEEM"
+  },
+  {
+   "id": "postgres",
+   "name": "PostgreSQL 16 support",
+   "status": "verified",
+   "evidence": "migrations 0001-0007, alembic check, full suite on Postgres 16 (run locally; Docker build untested)",
+   "source": "REDEEM"
+  },
+  {
+   "id": "intro",
+   "name": "REDEEM identity intro (3D cubes from left/right, orange tagline), skip/replay/reduced-motion",
+   "status": "partial",
+   "evidence": "apps/web/tests/memory.spec.ts; partner cubes show names because official logos could not be fetched",
+   "source": "REDEEM"
+  },
+  {
+   "id": "brand-logos",
+   "name": "Official Bolna / Wispr Flow / YC / WeMakeDevs logo artwork",
+   "status": "blocked",
+   "evidence": "sandbox cannot reach the official sites; drop files into apps/web/public/brand/",
+   "source": "REDEEM"
+  },
+  {
+   "id": "browser-skills",
+   "name": "Recorded browser skills (record, edit, parameterise, replay, repair)",
+   "status": "not_done",
+   "evidence": "not ported from RESOLVE",
+   "source": "RESOLVE"
+  },
+  {
+   "id": "other-adapters",
+   "name": "Brief-to-PDF, DevOps, Science, Creative adapters; Project Store; OCR; LLM abstraction; local STT",
+   "status": "not_done",
+   "evidence": "not ported; see docs/TASKS_250_STATUS.md",
+   "source": "RESOLVE"
+  },
+  {
+   "id": "webgl",
+   "name": "WebGL / three.js scenes",
+   "status": "not_done",
+   "evidence": "CSS 3D + canvas only",
+   "source": "REDEEM"
+  },
+  {
+   "id": "context-memory",
+   "name": "Context memory: per-user conversation turns (encrypted), short follow-ups inherit the previous request's entities",
+   "status": "verified",
+   "evidence": "tests/test_context.py, apps/web/tests/context.spec.ts",
+   "source": "REDEEM"
+  },
+  {
+   "id": "history",
+   "name": "Unified per-user history timeline (missions, cases, calls, documents, memory, conversation, activity) with search and filters",
+   "status": "verified",
+   "evidence": "tests/test_context.py, apps/web/tests/context.spec.ts",
+   "source": "REDEEM"
+  },
+  {
+   "id": "graph-memory",
+   "name": "Memory Graph: user, preferences, calls, missions, entities, cases, documents and their links (derived live, private)",
+   "status": "verified",
+   "evidence": "tests/test_context.py, apps/web/tests/context.spec.ts",
+   "source": "REDEEM"
+  },
+  {
+   "id": "graph-db",
+   "name": "Dedicated graph database / vector store",
+   "status": "not_done",
+   "evidence": "the graph is computed from relational rows; no Neo4j or embeddings",
+   "source": "REDEEM"
+  }
+ ]
 }

@@ -3,11 +3,11 @@
 @tailwind utilities;
 
 :root {
-  /* REDEEM: warm graphite + ONE controlled orange. amber/danger are reserved for warnings/errors. */
-  --bg: 10 9 9; --ink: 240 236 232; --surface: 20 18 17; --soft: 30 27 25; --line: 56 50 46;
-  --indigo: 255 122 26; --indigo-soft: 46 24 8; --deep: 6 5 5; --teal: 255 122 26; --teal-soft: 46 24 8;
-  --amber: 250 204 21; --amber-soft: 52 44 10; --muted: 165 156 148; --danger: 255 110 110; --danger-soft: 62 24 24;
-  --accent: 255 122 26;
+  /* REDEEM: black + shaded green + orange (matches the Buildathon artwork). Orange = action/identity, green = depth + verified. */
+  --bg: 4 6 5; --ink: 238 244 238; --surface: 9 14 11; --soft: 15 23 18; --line: 34 52 41;
+  --indigo: 255 122 26; --indigo-soft: 52 26 8; --deep: 3 5 4; --teal: 52 211 102; --teal-soft: 8 44 22;
+  --amber: 250 204 21; --amber-soft: 52 44 10; --muted: 150 168 156; --danger: 255 110 110; --danger-soft: 62 24 24;
+  --accent: 255 122 26; --green: 52 211 102; --green-deep: 12 92 44;
 }
 html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 body { @apply bg-bg text-ink font-sans antialiased; line-height: 1.6; }
@@ -31,7 +31,6 @@ body { @apply bg-bg text-ink font-sans antialiased; line-height: 1.6; }
 @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgb(var(--teal) / 0.45); } 100% { box-shadow: 0 0 0 16px rgb(var(--teal) / 0); } }
 .listening { animation: pulse-ring 1.4s ease-out infinite; }
 
-body { background: radial-gradient(1200px 700px at 78% -10%, rgb(var(--accent) / 0.10), transparent 60%), radial-gradient(900px 600px at 0% 20%, rgb(var(--accent) / 0.05), transparent 60%), rgb(var(--bg)); background-attachment: fixed; }
 .bg-surface { background-color: rgb(var(--surface)); }
 select, option { color-scheme: dark; }
 ::selection { background: rgb(var(--accent) / 0.35); }
@@ -45,7 +44,7 @@ select, option { color-scheme: dark; }
 @keyframes floor-run { to { background-position: 0 56px, 56px 0; } }
 .intro-stage { position: fixed; inset: 0; z-index: 90; background: rgb(8 7 7); overflow: hidden; animation: pullback .9s cubic-bezier(.65,0,.2,1) 3.9s forwards; transform-origin: 50% 46%; }
 @keyframes pullback { to { transform: scale(2.4); opacity: 0; filter: blur(8px); } }
-.intro-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse 60% 50% at 50% 55%, rgb(var(--accent) / .16), transparent 70%), radial-gradient(ellipse at center, transparent 40%, rgb(0 0 0 / .85)); }
+.intro-vignette { position: absolute; inset: 0; background: repeating-radial-gradient(circle at 92% -6%, rgb(52 211 102 / .22) 0 2px, rgb(12 92 44 / .12) 2px 30px, transparent 30px 58px),  radial-gradient(ellipse 60% 50% at 50% 55%, rgb(var(--accent) / .16), transparent 70%), radial-gradient(ellipse at center, transparent 40%, rgb(0 0 0 / .85)); }
 .intro-world { position: absolute; inset: 0; perspective: 1100px; perspective-origin: 50% 45%; }
 .intro-box { position: absolute; top: 40%; left: 50%; width: 0; height: 0; transform-style: preserve-3d; }
 .intro-box-l { animation: box-l 1.9s cubic-bezier(.2,.8,.2,1) .15s forwards; }
@@ -87,6 +86,19 @@ html[data-go] .rise { animation-play-state: running; }
 .node-pop { animation: node-pop .5s cubic-bezier(.16,1,.3,1) both; }
 @keyframes ticker-in { from { opacity: 0; transform: translateX(-18px); } to { opacity: 1; transform: none; } }
 .ticker-in { animation: ticker-in .35s ease both; }
-@keyframes ring { 0% { box-shadow: 0 0 0 0 rgb(var(--accent) / .55); } 100% { box-shadow: 0 0 0 18px rgb(var(--accent) / 0); } }
+@keyframes ring { 0% { box-shadow: 0 0 0 0 rgb(var(--green) / .55); } 100% { box-shadow: 0 0 0 18px rgb(var(--green) / 0); } }
 .live-dot { width: 9px; height: 9px; border-radius: 99px; background: rgb(var(--accent)); animation: ring 1.6s ease-out infinite; }
 main { overflow-x: clip; }
+
+/* Buildathon-style concentric green arcs on black */
+body { background: radial-gradient(900px 620px at 100% 0%, rgb(var(--green) / .20), transparent 62%), radial-gradient(700px 500px at 0% 100%, rgb(var(--accent) / .07), transparent 60%), rgb(var(--bg)); background-attachment: fixed; }
+.rings { position: absolute; inset: 0; pointer-events: none; background: repeating-radial-gradient(circle at 92% -6%, rgb(var(--green) / .30) 0 2px, rgb(var(--green-deep) / .16) 2px 30px, transparent 30px 58px); -webkit-mask-image: radial-gradient(circle at 92% -6%, #000 0%, transparent 62%); mask-image: radial-gradient(circle at 92% -6%, #000 0%, transparent 62%); }
+.pixel { font-family: "Gloock", "DM Serif Display", Georgia, serif; font-weight: 400; letter-spacing: -.01em; filter: url(#pixelate); }
+.serif { font-family: "Gloock", Georgia, serif; font-weight: 400; letter-spacing: 0; }
+h1, h2.display { font-family: "Gloock", Georgia, serif; font-weight: 400; }
+.glow-text { background: linear-gradient(180deg, #fff 0%, rgb(var(--accent)) 130%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 26px rgb(var(--accent) / .45)); }
+.pixel.glow-text, .glow-text.pixel { filter: url(#pixelate) drop-shadow(0 0 22px rgb(var(--accent) / .4)); }
+.live-dot { background: rgb(var(--green)); }
+.h-eyebrow { color: rgb(var(--green)); }
+h2.text-3xl, h2.text-4xl, h2.text-2xl { font-family: "Gloock", Georgia, serif; font-weight: 400; }
+.intro-name { font-family: "Gloock", Georgia, serif; font-weight: 400; }

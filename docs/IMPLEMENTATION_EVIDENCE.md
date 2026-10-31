@@ -66,3 +66,6 @@ Postgres 16 (throwaway server via `scripts/dev_postgres.sh`, UTF8): `alembic upg
 - Playwright 38 (new memory.spec.ts: exact intro text + orange tagline colour `rgb(255,122,26)`, skip/Esc/replay, Memory Center flow, Privacy Center + key rotation).
 - Screenshots: docs/screenshots/v3/*; intro GIF from real frames; emblem/metrics SVGs from scripts/build_readme_assets.py.
 - Not verified/not done: see docs/TASKS_250_STATUS.md. Official partner logos could not be obtained (no network route to the official sites); the intro shows names as text.
+
+## Context / graph / history pass
+tests/test_context.py (5): encrypted ordered turns, follow-up inherits bindings (and a new booking reference does not), timeline merges all sources with filters/search/isolation, graph links + no dangling edges + isolation, forget + account deletion. apps/web/tests/context.spec.ts (2): timeline search/filter, graph selection, theme tokens and display font. Screenshots: docs/screenshots/v4/.
