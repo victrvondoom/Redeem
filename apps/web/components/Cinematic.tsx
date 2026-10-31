@@ -81,7 +81,8 @@ function LogoPlate({ file, name }: { file: string; name: string }) {
   const [ok, setOk] = useState(true);
   return (
     <span className="grid h-full w-full place-items-center rounded-[14%] bg-[#f3efe9] p-[14%] text-[#1a1614]">
-      {ok ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={`/brand/${file}`} alt={`${name} logo`} onError={() => setOk(false)} className="max-h-full max-w-full object-contain" />
+      {ok ? // eslint-disable-next-line @next/next/no-img-element
+        <img src={`/brand/${file}`} alt={`${name} logo`} onError={() => setOk(false)} className="max-h-full max-w-full object-contain" />
         : <span className="text-center text-[0.8rem] font-extrabold uppercase tracking-widest">{name}</span>}
     </span>
   );

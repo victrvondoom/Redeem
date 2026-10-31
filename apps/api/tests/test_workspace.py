@@ -24,7 +24,7 @@ def pdf(pages: int, label: str = "Page") -> bytes:
 
 # ---------------------------------------------------------------- file worker (inherited from RESOLVE)
 def test_dedupe_dry_run_apply_verify_and_undo(api):
-    a, b, c = up(api, "a.txt", b"same bytes"), up(api, "b.txt", b"same bytes"), up(api, "c.txt", b"different")
+    a, _b, _c = up(api, "a.txt", b"same bytes"), up(api, "b.txt", b"same bytes"), up(api, "c.txt", b"different")
     inv = api.get(f"{B}/files").json()
     assert inv["total_files"] == 3 and "private sandbox" in inv["scope"]
     assert len(api.get(f"{B}/files/duplicates").json()["groups"]) == 1
