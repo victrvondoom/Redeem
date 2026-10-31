@@ -32,7 +32,7 @@ function Form({ mode }: { mode: "login" | "register" }) {
     <main id="main" className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-10">
       <div className="mb-6 flex items-center justify-between"><Link href="/"><Logo /></Link><LangSwitcher /></div>
       <form onSubmit={submit} className="card space-y-4" aria-labelledby="auth-h">
-        <h1 id="auth-h" className="text-2xl font-extrabold">{mode === "register" ? "Create your workspace" : "Welcome back"}</h1>
+        <h1 id="auth-h" className="text-2xl font-normal">{mode === "register" ? "Create your workspace" : "Welcome back"}</h1>
         {mode === "register" && (<div><label className="label" htmlFor="name">Name</label><input id="name" name="name" className="input" required maxLength={120} autoComplete="name" /></div>)}
         <div><label className="label" htmlFor="email">Email</label><input id="email" name="email" type="email" className="input" required autoComplete="email" /></div>
         <div><label className="label" htmlFor="password">Password</label>

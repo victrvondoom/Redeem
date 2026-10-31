@@ -87,7 +87,7 @@ export default function VoiceStudio() {
           <label className="flex min-h-[44px] items-center gap-3"><input type="checkbox" className="h-5 w-5" checked={status.consent.call_recording} onChange={(e) => void setConsent("call_recording", e.target.checked)} />Allow call recording (optional).</label></fieldset>)}
         <div className="flex flex-wrap items-center gap-3">
           {!live ? <button className="btn-teal" disabled={!ready || !status?.consent.voice_call} onClick={() => void start()}>Start call</button>
-            : <button className="btn bg-danger text-white" onClick={() => void call.current?.stop()}>End call</button>}
+            : <button className="btn bg-danger text-deep" onClick={() => void call.current?.stop()}>End call</button>}
           <button className="btn-ghost" disabled={!live} onClick={() => { const n = !muted; call.current?.setMuted(n); setMuted(n); }} aria-pressed={muted}>{muted ? "Unmute" : "Mute"}</button>
           <span role="status" className="text-sm font-semibold capitalize">Connection: {state}</span>
         </div>
@@ -98,7 +98,7 @@ export default function VoiceStudio() {
       <section aria-labelledby="ch-h"><h2 id="ch-h" className="mb-3 text-lg font-bold">Call history</h2>
         {calls.length === 0 ? <Empty title="No calls yet">Only real calls placed through Bolna appear here.</Empty> : (
           <ul className="space-y-2">{calls.map((c) => (<li key={c.id} className="card p-4"><div className="flex flex-wrap items-center justify-between gap-2">
-            <div><p className="font-semibold">{c.kind} call · {c.status}</p><p className="text-xs text-muted">{when(c.created_at, lang)} · execution {c.execution_id ?? "not yet correlated"}{c.duration_seconds != null && ` · ${c.duration_seconds}s`}{c.cost != null && ` · cost ${c.cost} (provider units)`}</p></div>
+            <div><p className="font-semibold">{c.kind} call, {c.status}</p><p className="text-xs text-muted">{when(c.created_at, lang)}, execution {c.execution_id ?? "not yet correlated"}{c.duration_seconds != null && `, ${c.duration_seconds}s`}{c.cost != null && `, cost ${c.cost} (provider units)`}</p></div>
             <button className="btn-ghost" disabled={!c.execution_id} onClick={() => void sync(c.id)}>Refresh from Bolna</button></div>
             {c.transcript && <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{c.transcript}</p>}</li>))}</ul>)}
       </section>

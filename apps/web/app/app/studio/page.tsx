@@ -25,7 +25,7 @@ export default function Studio() {
       <section className="card" aria-labelledby="dl-h"><h2 id="dl-h" className="text-lg font-bold">Documents</h2>
         {docs.length === 0 ? <div className="mt-3"><Empty title="No PDFs yet">Import one, or create a report below.</Empty></div> : <ul className="mt-3 divide-y divide-line">{docs.map((d) => (<li key={d.id} className="flex flex-wrap items-center gap-3 py-3 text-sm">
           <label className="flex min-h-[44px] items-center gap-3"><input type="checkbox" className="h-5 w-5" checked={sel.includes(d.id)} onChange={(e) => setSel(e.target.checked ? [...sel, d.id] : sel.filter((x) => x !== d.id))} aria-label={`Select ${d.name}`} /><span className="font-semibold">{d.name}</span></label>
-          <Tag>{d.operation}</Tag><span className="text-xs text-muted">{(d.size_bytes / 1024).toFixed(1)} KB · {when(new Date(d.created_at * 1000).toISOString())}</span>
+          <Tag>{d.operation}</Tag><span className="text-xs text-muted">{(d.size_bytes / 1024).toFixed(1)} KB, {when(new Date(d.created_at * 1000).toISOString())}</span>
           <span className="ml-auto flex gap-2"><button className="btn-ghost !min-h-[36px] px-3" onClick={() => void api<{ text: string }>(`/studio/documents/${d.id}/text`).then((r) => setPreview({ name: d.name, text: r.text })).catch((e) => setError(e.message))}>Text</button>
             <a className="btn-ghost !min-h-[36px] px-3" href={`/api/v1/studio/documents/${d.id}/download`}>Download</a>
             <button className="btn-ghost !min-h-[36px] px-3 text-danger" onClick={() => { if (confirm(`Delete ${d.name}?`)) void run(() => api(`/studio/documents/${d.id}`, { method: "DELETE" }), "Deleted."); }}>Delete</button></span></li>))}</ul>}

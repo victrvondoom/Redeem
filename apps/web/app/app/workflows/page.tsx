@@ -22,7 +22,7 @@ export default function Workflows() {
       <ErrorNote error={error} />
       <ul className="grid gap-4 md:grid-cols-2">{items.map((w) => (
         <li key={w.id} className="card"><h2 className="font-bold">{w.name}</h2>
-          <p className="mt-1 text-xs text-muted">Needs: {w.credentials.join(", ")} · Verified by: {w.verification}</p>
+          <p className="mt-1 text-xs text-muted">Needs: {w.credentials.join(", ")}, Verified by: {w.verification}</p>
           <div className="mt-3 space-y-2">{w.inputs.map((k) => (<div key={k}><label className="label" htmlFor={`${w.id}-${k}`}>{k.replaceAll("_", " ")}</label>
             <input id={`${w.id}-${k}`} className="input" value={vals[w.id]?.[k] ?? ""} onChange={(e) => setVals((v) => ({ ...v, [w.id]: { ...v[w.id], [k]: e.target.value } }))} /></div>))}</div>
           <p className="mt-3 text-xs text-muted">Recovery: {w.recovery}</p>

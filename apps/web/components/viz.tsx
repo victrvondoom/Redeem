@@ -4,7 +4,7 @@ import { Icon } from "./Icons";
 
 export function Stat({ label, value, sub, tone = "ink", href }: { label: string; value: ReactNode; sub?: string; tone?: "ink" | "teal" | "amber" | "danger" | "indigo"; href?: string }) {
   const c = { ink: "text-ink", teal: "text-teal", amber: "text-ink", danger: "text-danger", indigo: "text-indigo" }[tone];
-  const body = (<div className="card p-4"><p className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</p><p className={`mt-1 text-3xl font-extrabold tabular-nums ${c}`}>{value}</p>{sub && <p className="mt-1 text-xs text-muted">{sub}</p>}</div>);
+  const body = (<div className="card p-4"><p className="text-xs font-semibold text-muted">{label}</p><p className={`mt-1 text-3xl font-extrabold tabular-nums ${c}`}>{value}</p>{sub && <p className="mt-1 text-xs text-muted">{sub}</p>}</div>);
   return href ? <a href={href} className="block transition-transform hover:-translate-y-0.5">{body}</a> : body;
 }
 
@@ -13,7 +13,7 @@ export function Meter({ value, max = 1, tone = "teal", label, showValue = true }
   const bg = { teal: "bg-teal", indigo: "bg-indigo", amber: "bg-amber", danger: "bg-danger" }[tone];
   return (
     <div className="flex items-center gap-2" role="meter" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100} aria-label={label}>
-      <div className="h-2 flex-1 overflow-hidden rounded-full bg-soft"><div className={`h-full ${bg} transition-all`} style={{ width: `${pct}%` }} /></div>
+      <div className="h-2 flex-1 overflow-hidden rounded-full bg-soft"><div className={`h-full ${bg} transition-[width]`} style={{ width: `${pct}%` }} /></div>
       {showValue && <span className="w-10 text-right text-xs tabular-nums text-muted">{Math.round(pct)}%</span>}
     </div>
   );
@@ -44,7 +44,7 @@ export function Stepper({ stages, current, reached }: { stages: string[]; curren
       {final.map((s) => {
         const done = reached.includes(s), cur = s === current;
         return (
-          <li key={s} aria-current={cur ? "step" : undefined} className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${cur ? "bg-indigo text-white" : done ? "bg-teal-soft text-teal" : "bg-soft text-muted"}`}>
+          <li key={s} aria-current={cur ? "step" : undefined} className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${cur ? "bg-indigo text-deep" : done ? "bg-teal-soft text-teal" : "bg-soft text-muted"}`}>
             {done && !cur && <Icon name="check" size={12} />}{STAGE_LABEL[s] ?? s}
           </li>);
       })}
@@ -83,7 +83,7 @@ export function Dag({ tasks, onSelect, selected }: { tasks: TaskNode[]; onSelect
               <rect width="160" height="40" rx="10" fill="rgb(var(--surface))" stroke={selected === n.id ? "#3448A5" : col} strokeWidth={selected === n.id ? 2.5 : 1.6} />
               <rect width="5" height="40" rx="2.5" fill={col} />
               <text x="14" y="16" fontSize="11" fontWeight="700" fill="rgb(var(--ink))">{n.kind.length > 22 ? n.kind.slice(0, 21) + "…" : n.kind}</text>
-              <text x="14" y="31" fontSize="10" fill="rgb(var(--muted))">{n.owner} · {n.status.toLowerCase()}{n.mode === "write" ? " · write" : ""}</text>
+              <text x="14" y="31" fontSize="10" fill="rgb(var(--muted))">{n.owner}, {n.status.toLowerCase()}{n.mode === "write" ? ", write" : ""}</text>
             </g>); })}
       </svg>
     </div>

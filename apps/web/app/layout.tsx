@@ -18,6 +18,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         {/* Runtime webfonts with system fallbacks (Latin + Devanagari + Tamil + Telugu). */}
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloock&family=Manrope:wght@400;600;700;800&family=Noto+Sans+Devanagari:wght@400;600;700&family=Noto+Sans+Tamil:wght@400;600;700&family=Noto+Sans+Telugu:wght@400;600;700&display=swap" />
+              <noscript><style>{".rise,.reveal{opacity:1!important;transform:none!important}"}</style></noscript>
       </head>
       <body>
         <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true" focusable="false"><defs>

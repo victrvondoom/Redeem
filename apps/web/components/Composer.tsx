@@ -87,7 +87,7 @@ export function Composer({ compact = false }: { compact?: boolean }) {
         <button type="button" onClick={() => void submit()} disabled={busy} className="btn-primary">{t("composer.submit")}</button>
         <span aria-live="polite" className="text-sm text-teal">{listening ? t("composer.listening") : ""}</span>
       </div>
-      <p className="mt-3 text-xs text-muted">{supported ? t("composer.micNote") : t("composer.micUnsupported")}</p>
+      <p className="mt-3 text-sm text-muted">{supported ? t("composer.micNote") : t("composer.micUnsupported")}</p>
       <div className="mt-3"><ErrorNote error={error} /></div>
       <div className="mt-5">
         <p className="mb-2 text-sm font-semibold text-muted">{t("composer.suggested")}</p>

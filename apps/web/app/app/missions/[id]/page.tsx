@@ -9,7 +9,7 @@ import { useI18n } from "@/lib/i18n";
 const STEPS = ["INTENT_CAPTURED", "CLASSIFIED", "DISCOVERING", "NEEDS_APPROVAL", "AUTHORIZED", "EXECUTING", "VERIFIED"];
 const KIND_LABEL: Record<string, string> = {
   refund_request: "Refund request to airline desk", hotel_change_request: "Date-change request to hotel desk", reserve_stock: "Reserve stock for customer",
-  calendar_update: "Correct calendar event", browser_crm_task: "Create CRM follow-up task (in the browser)", browser_send_report: "Send the report (browser · SIMULATED delivery)", notify_contact: "Prepare family message (draft, not sent)", crm_followup: "Schedule CRM follow-up", prepare_case: "Prepare case record (not filed externally)",
+  calendar_update: "Correct calendar event", browser_crm_task: "Create CRM follow-up task (in the browser)", browser_send_report: "Send the report (browser, SIMULATED delivery)", notify_contact: "Prepare family message (draft, not sent)", crm_followup: "Schedule CRM follow-up", prepare_case: "Prepare case record (not filed externally)",
 };
 
 export default function MissionPage({ params }: { params: Promise<{ id: string }> }) {
@@ -63,8 +63,8 @@ export default function MissionPage({ params }: { params: Promise<{ id: string }
       <header>
         <div className="flex flex-wrap items-center gap-2"><StatusBadge status={m.status} /><Tag>Revision {m.revision}</Tag>
           <Tag>Detected: {m.language_detected}</Tag><Tag>Selected: {m.language_selected}</Tag>{m.source === "voice" && <Tag tone="indigo">Voice transcript</Tag>}</div>
-        <h1 className="mt-3 text-2xl font-extrabold tracking-tight sm:text-3xl">{m.intent}</h1>
-        <p className="mt-1 text-sm text-muted">Domains: {m.domains.join(", ") || "none detected"} · Started {when(m.created_at, lang)}</p>
+        <h1 className="mt-3 text-2xl font-normal tracking-tight sm:text-3xl">{m.intent}</h1>
+        <p className="mt-1 text-sm text-muted">Domains: {m.domains.join(", ") || "none detected"}, Started {when(m.created_at, lang)}</p>
       </header>
 
       <ol className="flex gap-1 overflow-x-auto text-xs font-semibold" aria-label="Progress">
@@ -102,7 +102,7 @@ export default function MissionPage({ params }: { params: Promise<{ id: string }
           <ul className="mt-4 space-y-3">{actions.map((a) => <ActionRow key={a.id} a={a} lang={lang} stale={a.revision !== m.revision}
             checkable={m.status === "NEEDS_APPROVAL" && a.status === "AWAITING_APPROVAL"} checked={picked[a.id] ?? true} onCheck={(v) => setPicked((p) => ({ ...p, [a.id]: v }))} />)}</ul>
           {m.plan.blocked?.map((b) => (<div key={b.kind} className="mt-3 rounded-xl bg-soft p-4 text-sm"><Tag tone="amber">{b.reason}</Tag><p className="mt-2 text-muted">Voice call to the airline — {b.detail}</p></div>))}
-          {m.plan.policy_citations?.map((c) => (<p key={c.id} className="mt-3 text-xs text-muted">Source: {c.title} · effective {c.effective_date} · {c.jurisdiction} {c.is_fixture && <Tag>fixture, not law</Tag>}</p>))}
+          {m.plan.policy_citations?.map((c) => (<p key={c.id} className="mt-3 text-xs text-muted">Source: {c.title}, effective {c.effective_date}, {c.jurisdiction} {c.is_fixture && <Tag>fixture, not law</Tag>}</p>))}
           {m.plan.notes?.map((n) => <p key={n} className="mt-2 text-xs text-muted">• {n}</p>)}
           <div className="mt-5 flex flex-wrap gap-3">
             {m.status === "NEEDS_APPROVAL" && <button className="btn-primary" disabled={busy || selected.length === 0}
@@ -167,7 +167,7 @@ function summarise(e: LedgerEvent): string {
 
 function ActionRow({ a, lang, stale, checkable, checked, onCheck }: { a: PlanAction; lang: string; stale: boolean; checkable: boolean; checked: boolean; onCheck: (v: boolean) => void }) {
   const p = a.params as Record<string, string | number>;
-  const target = a.kind === "browser_send_report" ? `${p.attachment_title} → ${p.contact_name} <${p.to_addr}> · sha256 ${String(p.attachment_sha256).slice(0, 10)}…` : a.kind === "browser_crm_task" ? `${p.contact_name} <${p.contact_email}> · “${p.title}”` : p.contact_name ? `To ${p.contact_name}: “${String(p.body).slice(0, 80)}…”` : p.lead_name ? `${p.lead_name} (phone ending ${p.phone_last4}) → ${p.follow_up_date}` : p.event_id ? String(p.title) : p.domain ? String(p.title) : p.booking_ref ? `${p.booking_ref}${p.passenger_name ? ` · ${p.passenger_name}` : ""}` : `${p.product_name} → ${p.customer_name}, pickup ${p.pickup_date}`;
+  const target = a.kind === "browser_send_report" ? `${p.attachment_title} → ${p.contact_name} <${p.to_addr}>, sha256 ${String(p.attachment_sha256).slice(0, 10)}…` : a.kind === "browser_crm_task" ? `${p.contact_name} <${p.contact_email}>, “${p.title}”` : p.contact_name ? `To ${p.contact_name}: “${String(p.body).slice(0, 80)}…”` : p.lead_name ? `${p.lead_name} (phone ending ${p.phone_last4}) → ${p.follow_up_date}` : p.event_id ? String(p.title) : p.domain ? String(p.title) : p.booking_ref ? `${p.booking_ref}${p.passenger_name ? `, ${p.passenger_name}` : ""}` : `${p.product_name} → ${p.customer_name}, pickup ${p.pickup_date}`;
   return (
     <li className={`rounded-xl border border-line p-4 ${stale ? "opacity-50" : ""}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -177,7 +177,7 @@ function ActionRow({ a, lang, stale, checkable, checked, onCheck }: { a: PlanAct
         <div className="text-right"><p className="font-bold">{a.amount_paise == null ? "No charge" : inr(a.amount_paise, lang)}</p><StatusBadge status={a.status === "AWAITING_APPROVAL" ? "NEEDS_APPROVAL" : a.status} /></div>
       </div>
       {a.depends_on && a.depends_on.length > 0 && <p className="mt-1 text-xs text-muted">Runs only after: {a.depends_on.length} earlier action verified</p>}
-      <p className="mt-2 text-xs text-muted">Approval is bound to digest <code>{a.digest.slice(0, 12)}…</code> · risk: {a.risk.replaceAll("_", " ")}</p>
+      <p className="mt-2 text-xs text-muted">Approval is bound to digest <code>{a.digest.slice(0, 12)}…</code>, risk: {a.risk.replaceAll("_", " ")}</p>
     </li>
   );
 }

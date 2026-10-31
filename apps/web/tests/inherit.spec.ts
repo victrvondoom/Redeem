@@ -26,7 +26,7 @@ test("RECLAIM case lifecycle in the UI: open → evidence → sources → option
   await page.getByLabel("Upload evidence").setInputFiles(fx("ticket.txt"));
   await expect(page.getByText(/classified as ticket/)).toBeVisible();
   await expect(page.getByText("Booking confirmation / e-ticket with PNR")).toBeVisible();
-  await expect(page.getByText(/ticket\.txt · strength/)).toBeVisible();
+  await expect(page.getByText(/ticket\.txt, strength/)).toBeVisible();
   await page.getByLabel("Upload evidence").setInputFiles(fx("reply.txt"));
   await expect(page.getByText("Evidence-to-claim mapping")).toBeVisible();
   await expect(page.getByText("supported").first()).toBeVisible();

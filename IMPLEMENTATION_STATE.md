@@ -26,3 +26,6 @@ Backend 217 passed, E2E 38. Added: orange/graphite theme, REDEEM intro (Bolna + 
 
 ## Context/graph/history + theme pass (latest)
 Backend 222, E2E 40. New: conversation_turns (0008), /timeline, /context, /graph, History timeline tab, Memory Graph page, Conversation context panel, black+green+orange theme, Gloock pixel display font. README now carries the Buildathon banner and an honest "many features do not work" statement.
+
+## UI polish pass (latest)
+Hallmark rules applied as data (skill scripts not executed); `node scripts/ui_floor_check.mjs` = 0 FAIL against the running app. See docs/DESIGN_AUDIT.md. E2E 40 passed.

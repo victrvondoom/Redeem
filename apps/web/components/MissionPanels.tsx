@@ -42,10 +42,10 @@ export function Alternatives({ m, lang }: { m: Mission; lang: string }) {
   if (!alts?.length) return null;
   return (
     <section className="card" aria-labelledby="alt-h">
-      <div className="flex flex-wrap items-center gap-2"><h2 id="alt-h" className="text-lg font-bold">Alternative flights</h2><Tag tone="amber">fixture data · read-only</Tag></div>
+      <div className="flex flex-wrap items-center gap-2"><h2 id="alt-h" className="text-lg font-bold">Alternative flights</h2><Tag tone="amber">fixture data, read-only</Tag></div>
       <p className="mt-1 text-sm text-muted">Gathered in parallel with the policy and calendar reads. REDEEM lists options; it does not book a replacement.</p>
       <ul className="mt-3 divide-y divide-line text-sm">{alts.map((a) => (
-        <li key={a.flight} className="flex flex-wrap items-center justify-between gap-2 py-2"><span><strong>{a.flight}</strong> · {a.route} · {a.departs}</span>
+        <li key={a.flight} className="flex flex-wrap items-center justify-between gap-2 py-2"><span><strong>{a.flight}</strong>, {a.route}, {a.departs}</span>
           <span className="flex items-center gap-2">{inr(a.price_paise, lang)}{a.bookable ? <Tag tone="teal">{a.seats} seats</Tag> : <Tag tone="danger">sold out</Tag>}</span></li>))}</ul>
     </section>
   );
@@ -77,7 +77,7 @@ export function EvidenceCenter({ missionId, refreshKey }: { missionId: string; r
       {shown.length === 0 ? <div className="mt-3"><Empty title="No evidence yet" /></div> : (
         <ul className="mt-3 space-y-2">{shown.map((e) => (
           <li key={e.id} className="rounded-xl border border-line p-3 text-sm"><div className="flex flex-wrap items-center gap-2"><Tag tone={CAT_TONE[e.category] ?? "soft"}>{e.category.replaceAll("_", " ")}</Tag><strong>{e.title}</strong></div>
-            <p className="mt-1 text-xs text-muted">{e.source} · {e.timestamp?.slice(0, 19).replace("T", " ")} UTC · {e.verification_status.replaceAll("_", " ").toLowerCase()} · <code>{e.id}</code> · hash <code>{e.content_hash.slice(0, 12)}</code></p></li>))}</ul>)}
+            <p className="mt-1 text-xs text-muted">{e.source}, {e.timestamp?.slice(0, 19).replace("T", " ")} UTC, {e.verification_status.replaceAll("_", " ").toLowerCase()}, <code>{e.id}</code>, hash <code>{e.content_hash.slice(0, 12)}</code></p></li>))}</ul>)}
       {unc.length > 0 && <div className="mt-4 rounded-xl bg-amber-soft p-4 text-sm"><p className="font-semibold">Remaining uncertainty</p><ul className="mt-1 list-disc pl-5">{unc.map((u) => <li key={u}>{u.replaceAll("_", " ")}</li>)}</ul></div>}
     </section>
   );
@@ -111,11 +111,11 @@ export function TaskGraph({ tasks }: { tasks: TaskNode[] }) {
   return (
     <section className="card" aria-labelledby="dag-h">
       <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="dag-h" className="text-lg font-bold">Task graph</h2>
-        <p className="text-xs text-muted">revision {rev} · {cur.length} tasks · {count("DONE")} done · {count("RUNNING")} running · {count("FAILED")} failed · {count("SKIPPED")} skipped · {count("QUEUED")} queued</p></div>
+        <p className="text-xs text-muted">revision {rev}, {cur.length} tasks, {count("DONE")} done, {count("RUNNING")} running, {count("FAILED")} failed, {count("SKIPPED")} skipped, {count("QUEUED")} queued</p></div>
       <p className="mt-1 text-sm text-muted">Every node has an owner role, dependencies, a timeout and a retry budget, and is persisted. Reads can run concurrently; writes are serialised and gated on their dependencies.</p>
       <div className="mt-3"><Dag tasks={tasks} selected={sel?.id} onSelect={setSel} /></div>
       {sel && (<div className="mt-3 rounded-xl bg-soft p-4 text-sm"><p className="font-semibold">{sel.kind} <Tag>{sel.owner}</Tag> <Tag tone={sel.status === "DONE" ? "teal" : sel.status === "FAILED" ? "danger" : "amber"}>{sel.status.toLowerCase()}</Tag> <Tag>{sel.mode}</Tag></p>
-        <p className="mt-1 text-xs text-muted">attempts {sel.attempts}/{sel.retry_budget + 1}{sel.error ? ` · error: ${sel.error}` : ""}</p>
+        <p className="mt-1 text-xs text-muted">attempts {sel.attempts}/{sel.retry_budget + 1}{sel.error ? `, error: ${sel.error}` : ""}</p>
         {Object.keys(sel.output).length > 0 && <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap text-xs">{JSON.stringify(sel.output, null, 1)}</pre>}</div>)}
     </section>
   );
@@ -131,7 +131,7 @@ export function BrowserPanel({ missionId, refreshKey }: { missionId: string; ref
   if (!items.length) return null;
   return (
     <section className="card" aria-labelledby="br-h">
-      <div className="flex flex-wrap items-center gap-2"><h2 id="br-h" className="text-lg font-bold">Browser sessions</h2><Tag tone="amber">real Chromium · simulated apps</Tag></div>
+      <div className="flex flex-wrap items-center gap-2"><h2 id="br-h" className="text-lg font-bold">Browser sessions</h2><Tag tone="amber">real Chromium, simulated apps</Tag></div>
       <p className="mt-1 text-sm text-muted">A fresh browser context per run, restricted to the simulated CRM, report store and outbox on loopback. Each action is recorded before and after; the page&apos;s own success message is never trusted.</p>
       <ul className="mt-3 space-y-3">{items.map((s) => (
         <li key={s.id} className="rounded-xl border border-line p-4 text-sm">
@@ -140,12 +140,12 @@ export function BrowserPanel({ missionId, refreshKey }: { missionId: string; ref
           {s.note && <p className="mt-1 text-xs text-muted">Adapted: {s.note}</p>}
           <ul className="mt-2 grid gap-2 sm:grid-cols-2">{s.snapshots.map((x) => (
             <li key={x.id}><button onClick={() => setShot(x)} className="w-full rounded-lg bg-soft p-2 text-left hover:ring-2 hover:ring-indigo"><span className="flex items-center gap-2"><Tag tone={x.phase === "after" ? "teal" : x.phase === "before" ? "amber" : "indigo"}>{x.phase}</Tag><span className="truncate text-xs font-semibold">{x.label}</span></span>
-              <span className="mt-1 block text-[11px] text-muted">dom {x.dom_sha.slice(0, 8)} · aria {x.aria_sha.slice(0, 8)} · shot {x.screenshot_sha.slice(0, 8)} · {x.fused.elements} elements</span></button></li>))}</ul>
+              <span className="mt-1 block text-[11px] text-muted">dom {x.dom_sha.slice(0, 8)}, aria {x.aria_sha.slice(0, 8)}, shot {x.screenshot_sha.slice(0, 8)}, {x.fused.elements} elements</span></button></li>))}</ul>
         </li>))}</ul>
-      {shot && (<div className="mt-4 rounded-xl border border-line p-3"><div className="flex items-center justify-between"><p className="text-sm font-semibold">{shot.phase} · {shot.label}</p><button className="text-xs underline" onClick={() => setShot(null)}>Close</button></div>
+      {shot && (<div className="mt-4 rounded-xl border border-line p-3"><div className="flex items-center justify-between"><p className="text-sm font-semibold">{shot.phase}, {shot.label}</p><button className="text-xs underline" onClick={() => setShot(null)}>Close</button></div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={shot.screenshot_url} alt={`Screenshot: ${shot.label}`} className="mt-2 w-full rounded-lg border border-line" />
-        <p className="mt-1 break-all text-[11px] text-muted">{shot.url} · state fusion: URL + DOM text hash + ARIA tree hash + screenshot hash + API state hash {shot.fused.api_sha ? shot.fused.api_sha.slice(0, 10) : "n/a"}</p></div>)}
+        <p className="mt-1 break-all text-[11px] text-muted">{shot.url}, state fusion: URL + DOM text hash + ARIA tree hash + screenshot hash + API state hash {shot.fused.api_sha ? shot.fused.api_sha.slice(0, 10) : "n/a"}</p></div>)}
     </section>
   );
 }

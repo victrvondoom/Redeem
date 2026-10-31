@@ -80,7 +80,7 @@ export default function CommandCenter() {
             {rows === null ? <p className="text-muted" role="status">Loading…</p> : shown.length ? (
               <ul className="space-y-2">{shown.map((r) => (
                 <li key={r.id}><Link href={`/app/missions/${r.id}`} className="card flex flex-col gap-2 p-4 hover:border-indigo sm:flex-row sm:items-center sm:justify-between">
-                  <span className="min-w-0"><span className="block truncate font-semibold">{r.intent}</span><span className="text-xs text-muted">{when(r.created_at, lang)} · {r.domains.join(", ") || "unclassified"}</span></span><StatusBadge status={r.status} /></Link></li>))}</ul>
+                  <span className="min-w-0"><span className="block truncate font-semibold">{r.intent}</span><span className="text-xs text-muted">{when(r.created_at, lang)}, {r.domains.join(", ") || "unclassified"}</span></span><StatusBadge status={r.status} /></Link></li>))}</ul>
             ) : <Empty title={t("console.empty")}>Describe a problem above, open a case, or try a demo scenario.</Empty>}
           </section>
         </div>
@@ -94,7 +94,7 @@ export default function CommandCenter() {
           <section aria-labelledby="feed-h" className="card"><h2 id="feed-h" className="flex items-center gap-2 text-lg font-bold"><Icon name="bolt" size={18} /> Live activity</h2>
             {ov && ov.recent.length ? <ol className="mt-3 space-y-2 text-sm">{ov.recent.slice(0, 9).map((r, i) => (
               <li key={i}><Link href={r.href} className="flex items-start gap-3 hover:text-indigo"><span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-teal" aria-hidden /><span><span className="font-medium">{SAY[r.type] ?? r.type.toLowerCase().replaceAll("_", " ")}</span>
-                <span className="block text-xs text-muted">{r.source} · {when(r.at, lang)}</span></span></Link></li>))}</ol> : <p className="mt-3 text-sm text-muted">Events appear here as work happens. Polls every 5 seconds.</p>}
+                <span className="block text-xs text-muted">{r.source}, {when(r.at, lang)}</span></span></Link></li>))}</ol> : <p className="mt-3 text-sm text-muted">Events appear here as work happens. Polls every 5 seconds.</p>}
           </section>
           <p className="text-xs text-muted">{ov?.scope}</p>
         </div>

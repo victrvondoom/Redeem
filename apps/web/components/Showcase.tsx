@@ -3,11 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { CountUp } from "./Cinematic";
 import { Icon } from "./Icons";
 
-const LAYERS: [string, string, string, string][] = [
-  ["01 · PLAN", "Refund · hotel · calendar · family draft", "5 actions, each with a digest", "mission"],
-  ["02 · APPROVE", "Bound to exact target + amount", "change anything → approval void", "check"],
-  ["03 · EXECUTE", "Provider acknowledges", "ACK is not proof", "bolt"],
-  ["04 · VERIFY", "Independent read-back", "DATABASE VERIFIED ✓", "vault"],
+const LAYERS: [string, string, string][] = [
+  ["1. Plan", "Five actions", "mission"], ["2. Approve", "Exact amount", "check"], ["3. Execute", "Provider replies", "bolt"], ["4. Verify", "Read-back", "vault"],
 ];
 
 /** 3D exploded stack of the four mission stages; parallax follows the pointer, active layer cycles. */
@@ -22,18 +19,16 @@ export function HeroDeck() {
   };
   return (
     <div className="scene relative mx-auto h-[420px] w-full max-w-[460px] sm:h-[480px]" onPointerMove={move}>
-      <div aria-hidden="true" className="absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl" style={{ background: "rgb(var(--accent) / 0.22)" }} />
       <div ref={box} className="preserve float3d absolute inset-x-0 top-8 mx-auto h-[360px] w-[300px] sm:w-[340px]" style={{ ["--rx" as string]: "10deg", ["--ry" as string]: "-22deg" }}>
-        {LAYERS.map(([k, t, s, ic], i) => {
+        {LAYERS.map(([k, t, ic], i) => {
           const active = i === on;
           return (
-            <div key={k} className="absolute left-0 w-full rounded-2xl border p-4 transition-all duration-700"
+            <div key={k} className="absolute left-0 w-full rounded-2xl border p-4 transition-[transform,opacity,border-color] duration-700"
               style={{ top: i * 84, transform: `translateZ(${(3 - i) * 46 + (active ? 34 : 0)}px)`, borderColor: active ? "rgb(var(--accent))" : "rgb(var(--line))",
-                background: active ? "linear-gradient(145deg, rgb(56 28 8 / .95), rgb(8 18 30 / .95))" : "linear-gradient(145deg, rgb(14 24 18 / .92), rgb(6 10 8 / .92))",
-                boxShadow: active ? "0 0 50px rgb(var(--accent) / .45), 0 30px 50px -20px #000" : "0 24px 40px -20px #000", backdropFilter: "blur(8px)" }}>
+                background: active ? "rgb(var(--indigo-soft))" : "rgb(var(--surface))", boxShadow: "var(--elev-2)" }}>
               <div className="flex items-center gap-3">
-                <span className="grid h-10 w-10 place-items-center rounded-xl" style={{ background: active ? "rgb(var(--accent))" : "rgb(var(--soft))", color: active ? "#03050A" : "rgb(var(--accent))" }}><Icon name={ic} size={20} /></span>
-                <div className="min-w-0"><p className="text-[11px] font-bold tracking-[0.2em] text-teal">{k}</p><p className="truncate text-sm font-semibold">{t}</p><p className="truncate text-xs text-muted">{s}</p></div>
+                <span className="grid h-10 w-10 place-items-center rounded-xl" style={{ background: active ? "rgb(var(--accent))" : "rgb(var(--soft))", color: active ? "rgb(var(--on-accent))" : "rgb(var(--accent))" }}><Icon name={ic} size={20} /></span>
+                <div className="min-w-0"><p className="text-sm font-semibold text-teal">{k}</p><p className="truncate text-sm text-muted">{t}</p></div>
               </div>
             </div>
           );
@@ -58,17 +53,15 @@ export function LiveStats() {
   return (
     <div>
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {items.map(([k, v]) => (<li key={k} className="card !p-4 text-center"><p className="glow-text text-3xl font-extrabold tabular-nums">{v === undefined ? "—" : <CountUp to={v} />}</p><p className="mt-1 text-xs font-semibold uppercase tracking-wider text-muted">{k}</p></li>))}
+        {items.map(([k, v]) => (<li key={k} className="card !p-4 text-center"><p className="text-3xl font-extrabold tabular-nums">{v === undefined ? "—" : <CountUp to={v} />}</p><p className="mt-1 text-sm text-muted">{k}</p></li>))}
       </ul>
-      <p className="mt-3 flex items-center justify-center gap-2 text-xs text-muted"><span className="live-dot" aria-hidden="true" />{err ? "API unreachable — counters unavailable" : "Live from this deployment's database · includes demo fixtures · not a customer metric"}</p>
+      <p className="mt-3 text-center text-sm text-muted">{err ? "The API is unreachable, so counters are unavailable." : "Live counts from this deployment, demo data included."}</p>
     </div>
   );
 }
 
 const SCRIPT: [string, string][] = [
-  ["INTENT_CAPTURED", "“Flight FA2041 cancelled, I need my refund”"], ["CLASSIFIED", "flight_recovery · entity FA2041 bound"], ["READS_COMPLETED", "3 alternatives + booking read in parallel"],
-  ["PLAN_READY", "refund · hotel · calendar · family draft"], ["APPROVED", "digest 9f3c…a1 bound to booking + amount"], ["DISPATCHING", "idempotency key issued"],
-  ["ACKED", "provider acknowledged (not proof)"], ["VERIFIED", "refund_request found by independent read-back"], ["RECEIPT", "hash-chained, downloadable"],
+  ["CLASSIFIED", "flight_recovery"], ["PLAN_READY", "four actions"], ["APPROVED", "digest bound"], ["ACKED", "reply, not proof"], ["VERIFIED", "read back"], ["RECEIPT", "hash-chained"],
 ];
 
 /** Looping illustration of one mission through the engine. It is a labelled simulation; the real run lives in the console. */
@@ -78,11 +71,11 @@ export function PipelineSim() {
   const shown = SCRIPT.slice(0, Math.min(n, SCRIPT.length));
   const pct = Math.round((Math.min(n, SCRIPT.length) / SCRIPT.length) * 100);
   return (
-    <div className="card scanline overflow-hidden !p-0">
-      <div className="flex items-center justify-between border-b border-line px-4 py-2.5 text-xs"><span className="flex items-center gap-2 font-bold tracking-widest text-teal"><span className="live-dot" aria-hidden="true" />ENGINE · SIMULATION LOOP</span><span className="text-muted">illustrative — real runs in console → Live</span></div>
-      <div className="h-1 bg-soft"><div className="h-1 bg-teal transition-all duration-700" style={{ width: `${pct}%`, boxShadow: "0 0 12px rgb(var(--accent))" }} /></div>
+    <div className="card overflow-hidden !p-0">
+      <div className="flex items-center justify-between border-b border-line px-4 py-2.5 text-xs"><span className="font-semibold text-teal">Simulation loop</span><span className="text-muted">Illustrative loop</span></div>
+      <div className="h-1 overflow-hidden bg-soft"><div className="h-1 w-full origin-left bg-accent transition-transform duration-700" style={{ transform: `scaleX(${pct / 100})` }} /></div>
       <ol className="min-h-[300px] space-y-1.5 p-4 font-mono text-[13px]" aria-live="off">
-        {shown.map(([k, v], i) => (<li key={k} className="ticker-in flex flex-wrap gap-x-3"><span className="text-muted">{String(i + 1).padStart(2, "0")}</span><span className={k === "VERIFIED" || k === "RECEIPT" ? "font-bold text-teal" : "font-bold text-ink"}>{k}</span><span className="text-muted">{v}</span></li>))}
+        {shown.map(([k, v]) => (<li key={k} className="ticker-in flex flex-wrap gap-x-3"><span className={k === "VERIFIED" || k === "RECEIPT" ? "font-bold text-teal" : "font-bold text-ink"}>{k}</span><span className="text-muted">{v}</span></li>))}
       </ol>
     </div>
   );

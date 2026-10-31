@@ -25,7 +25,7 @@ export default function Privacy() {
     <div className="mx-auto max-w-5xl space-y-6">
       <PageTitle title="Privacy Center" sub="What REDEEM holds for you, how it is protected, and the controls that act on the real data." />
       <ErrorNote error={error} />
-      <ul className="grid grid-cols-2 gap-3 md:grid-cols-5">{CNT.map(([k, l, href]) => (<li key={k}><Link href={href} className="card block !p-4 text-center hover:no-underline"><p className="glow-text text-3xl font-extrabold tabular-nums">{s ? s.counts[k] : "—"}</p><p className="mt-1 text-xs font-semibold uppercase tracking-wider text-muted">{l}</p></Link></li>))}</ul>
+      <ul className="grid grid-cols-2 gap-3 md:grid-cols-5">{CNT.map(([k, l, href]) => (<li key={k}><Link href={href} className="card block !p-4 text-center hover:no-underline"><p className="text-3xl font-extrabold tabular-nums">{s ? s.counts[k] : "—"}</p><p className="mt-1 text-xs font-semibold text-muted">{l}</p></Link></li>))}</ul>
       <section className="card" aria-labelledby="enc-h">
         <div className="flex flex-wrap items-center justify-between gap-3"><h2 id="enc-h" className="text-lg font-bold">Encryption</h2>{e && <div className="flex gap-2"><Tag tone="teal">{e.algorithm}</Tag><Tag tone={e.production_mode ? "teal" : "amber"}>{e.production_mode ? "production key" : "development key"}</Tag><Tag tone="soft">not end-to-end</Tag></div>}</div>
         {e && (<div className="mt-3 grid gap-5 md:grid-cols-2">

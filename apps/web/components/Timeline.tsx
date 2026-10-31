@@ -32,7 +32,7 @@ export function TimelineTab() {
       {d && d.items.length === 0 && <div className="card text-center text-muted">Nothing here yet. Start a mission, teach a preference or upload a document and it appears.</div>}
       <ol className="relative space-y-2 border-l border-line pl-5" aria-label="History timeline">{d?.items.map((i) => (
         <li key={`${i.kind}-${i.ref}`} className="relative"><span className="absolute -left-[27px] top-4 h-2.5 w-2.5 rounded-full bg-teal shadow-[0_0_10px_rgb(var(--green))]" aria-hidden="true" />
-          <Link href={i.href} className="card !p-3 flex flex-col gap-1 hover:no-underline sm:flex-row sm:items-center sm:justify-between"><span className="min-w-0"><span className="block truncate font-semibold">{i.title}</span><span className="text-xs text-muted">{new Date(i.at).toLocaleString()} · {i.detail}</span></span><Tag tone={TONE[i.kind] ?? "soft"}>{i.kind}</Tag></Link></li>))}</ol>
+          <Link href={i.href} className="card !p-3 flex flex-col gap-1 hover:no-underline sm:flex-row sm:items-center sm:justify-between"><span className="min-w-0"><span className="block truncate font-semibold">{i.title}</span><span className="text-xs text-muted">{new Date(i.at).toLocaleString()}, {i.detail}</span></span><Tag tone={TONE[i.kind] ?? "soft"}>{i.kind}</Tag></Link></li>))}</ol>
       {d && d.total > LIMIT && <div className="flex items-center justify-between"><button className="btn-ghost" disabled={page === 0} onClick={() => setPage(page - 1)}>Previous</button><span className="text-sm text-muted">{page * LIMIT + 1}–{Math.min(d.total, (page + 1) * LIMIT)} of {d.total}</span><button className="btn-ghost" disabled={(page + 1) * LIMIT >= d.total} onClick={() => setPage(page + 1)}>Next</button></div>}
     </div>
   );

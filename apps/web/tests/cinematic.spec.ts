@@ -16,7 +16,7 @@ test("cinematic intro never blocks the page and hero + live counters appear", as
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Speak your need");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 8_000 });
   await expect(page.getByText("Knowledge passages")).toBeVisible();
-  await expect(page.getByText(/Live from this deployment/)).toBeVisible();
+  await expect(page.getByText(/Live counts from this deployment/)).toBeVisible();
   await page.locator("#intent").fill("Flight FA2041 cancelled refund");
   await page.getByRole("button", { name: "Start mission" }).click();
   await expect(page).toHaveURL(/\/register/);
@@ -34,7 +34,7 @@ test("Live Engine runs a real mission and replays it from the ledger", async ({ 
   await register(page);
   await page.getByRole("link", { name: "Live Engine" }).click();
   await page.getByRole("button", { name: "Run live" }).click();
-  await expect(page.getByText(/LEDGER ·/)).toBeVisible();
+  await expect(page.getByText(/Ledger, \d+ of \d+/)).toBeVisible();
   await page.getByRole("button", { name: "4×" }).click();
   await expect(page.getByText("16/16 tasks verified")).toBeVisible({ timeout: 60_000 });
   await expect(page.getByText("VERIFIED").first()).toBeVisible();

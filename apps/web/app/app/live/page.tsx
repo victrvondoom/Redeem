@@ -70,10 +70,10 @@ export default function Live() {
     <div className="mx-auto max-w-6xl space-y-6">
       <PageTitle title="Live Engine" sub="Run a real mission through the engine, then watch it play back from its append-only ledger: tasks light up as the events that prove them arrive. Fixture providers only." />
       <ErrorNote error={error} />
-      <div className="card scanline flex flex-wrap items-center gap-3 !p-4">
+      <div className="card flex flex-wrap items-center gap-3 !p-4">
         <div role="radiogroup" aria-label="Scenario" className="flex flex-wrap gap-2">
           {SCEN.map(([id, name, sub]) => (<button key={id} role="radio" aria-checked={scn === id} onClick={() => setScn(id)} title={sub}
-            className={`min-h-[44px] rounded-xl border px-4 text-sm font-semibold transition ${scn === id ? "border-teal bg-teal-soft text-teal shadow-[0_0_24px_-6px_rgb(var(--accent))]" : "border-line text-muted hover:text-ink"}`}>{name}</button>))}
+            className={`min-h-[44px] rounded-xl border px-4 text-sm font-semibold transition-colors ${scn === id ? "border-teal bg-teal-soft text-teal" : "border-line text-muted hover:text-ink"}`}>{name}</button>))}
         </div>
         <button className="btn-primary ml-auto" disabled={busy} onClick={() => void run()}>{busy ? "Running engine…" : mission ? "Run again" : "Run live"}</button>
       </div>
@@ -83,22 +83,22 @@ export default function Live() {
       ) : (<>
         <div className="grid gap-6 lg:grid-cols-1">
           <Tilt max={4} className="card !p-0 overflow-hidden">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3"><span className="flex items-center gap-2 text-xs font-bold tracking-widest text-teal"><span className={play ? "live-dot" : "h-2 w-2 rounded-full bg-muted"} aria-hidden="true" />TASK GRAPH</span>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3"><span className="text-sm font-semibold text-teal">Task graph</span>
               <span className="text-xs text-muted">{doneN}/{tasks.length} tasks verified</span></div>
             <div className="overflow-x-auto p-3"><svg role="img" aria-label="Mission task graph" viewBox={`0 0 ${g.W} ${g.H}`} className="h-auto w-full">
               {tasks.flatMap((t) => t.depends_on.map((d) => { const a = g.pos[d], b = g.pos[t.id]; if (!a || !b) return null; const on = state(t) !== "idle";
-                return <path key={`${d}-${t.id}`} d={`M${a.x + 140} ${a.y + 24} C ${a.x + 150} ${a.y + 24}, ${b.x - 10} ${b.y + 24}, ${b.x} ${b.y + 24}`} fill="none" stroke={on ? "rgb(255 122 26)" : "rgb(52 47 44)"} strokeWidth={on ? 2 : 1} style={{ filter: on ? "drop-shadow(0 0 4px rgb(255 122 26))" : undefined, transition: "all .4s" }} />; }))}
+                return <path key={`${d}-${t.id}`} d={`M${a.x + 140} ${a.y + 24} C ${a.x + 150} ${a.y + 24}, ${b.x - 10} ${b.y + 24}, ${b.x} ${b.y + 24}`} fill="none" stroke={on ? "rgb(255 122 26)" : "rgb(52 47 44)"} strokeWidth={on ? 2 : 1} style={{ transition: "stroke .4s, stroke-width .4s" }} />; }))}
               {tasks.map((t) => { const p = g.pos[t.id], s = state(t); return (
                 <g key={t.id} transform={`translate(${p.x},${p.y})`}><g className={s !== "idle" ? "node-pop" : ""} style={{ transformBox: "fill-box", transformOrigin: "center" }}>
-                  <rect width="140" height="48" rx="11" fill={s === "done" ? "rgb(8 44 22)" : s === "active" ? "rgb(52 26 8)" : "rgb(9 14 11)"} stroke={s === "idle" ? "rgb(34 52 41)" : s === "done" ? "rgb(52 211 102)" : "rgb(255 122 26)"} strokeWidth={s === "active" ? 2 : 1} style={{ filter: s === "active" ? "drop-shadow(0 0 10px rgb(255 122 26))" : undefined }} />
+                  <rect width="140" height="48" rx="11" fill={s === "done" ? "rgb(8 44 22)" : s === "active" ? "rgb(52 26 8)" : "rgb(9 14 11)"} stroke={s === "idle" ? "rgb(34 52 41)" : s === "done" ? "rgb(52 211 102)" : "rgb(255 122 26)"} strokeWidth={s === "active" ? 2 : 1} style={{ filter: undefined }} />
                   <text x="10" y="20" fontSize="12" fontWeight="700" fill={s === "idle" ? "rgb(160 152 146)" : "rgb(240 236 232)"}>{t.kind.length > 17 ? t.kind.slice(0, 16) + "…" : t.kind}</text>
-                  <text x="10" y="37" fontSize="10" fill="rgb(160 152 146)">{t.owner} · {s === "done" ? "verified ✓" : s === "active" ? "working…" : "waiting"}</text>
+                  <text x="10" y="37" fontSize="10" fill="rgb(160 152 146)">{t.owner}, {s === "done" ? "verified ✓" : s === "active" ? "working…" : "waiting"}</text>
                 </g></g>); })}
             </svg></div>
           </Tilt>
 
           <div className="card !p-0">
-            <div className="flex items-center justify-between border-b border-line px-4 py-3"><span className="text-xs font-bold tracking-widest text-teal">LEDGER · {Math.min(cur, events.length)}/{events.length}</span><span className="text-xs text-muted">hash-chained, append-only</span></div>
+            <div className="flex items-center justify-between border-b border-line px-4 py-3"><span className="text-sm font-semibold text-teal">Ledger, {Math.min(cur, events.length)} of {events.length}</span><span className="text-xs text-muted">hash-chained, append-only</span></div>
             <ol ref={feed} className="h-[260px] space-y-1 overflow-y-auto p-3 font-mono text-[12px]" aria-label="Ledger events">
               {seen.map((e) => (<li key={e.seq} className="ticker-in flex gap-2 rounded-lg px-2 py-1 hover:bg-soft"><span className="w-7 shrink-0 text-muted">{e.seq}</span><span className={`shrink-0 font-bold ${GOOD.has(e.type) ? "text-teal" : "text-ink"}`}>{e.type}</span><span className="truncate text-muted">{JSON.stringify(e.data).slice(0, 90)}</span></li>))}
               {cur === 0 && <li className="p-2 text-muted">Press play…</li>}
@@ -116,7 +116,7 @@ export default function Live() {
           <div className="flex flex-wrap items-center gap-3"><h2 className="text-lg font-bold">Outcome</h2>
             <Tag tone={finished ? (mission.status === "VERIFIED" ? "teal" : "amber") : "soft"}>{finished ? mission.status : "in progress"}</Tag>
             {last && <span className="text-sm text-muted">now: <span className="font-mono text-ink">{last.type}</span></span>}</div>
-          {finished && <p className="mt-2 text-sm text-muted">The engine finished and read the result back independently. <Link className="font-semibold text-teal" href={`/app/missions/${mission.id}`}>Open the mission, evidence and receipt →</Link></p>}
+          {finished && <p className="mt-2 text-sm text-muted">The engine finished and read the result back independently. <Link className="font-semibold text-teal" href={`/app/missions/${mission.id}`}>Open the mission, evidence and receipt</Link></p>}
         </div>
       </>)}
     </div>

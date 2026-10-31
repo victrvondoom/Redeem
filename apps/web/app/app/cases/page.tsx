@@ -59,7 +59,7 @@ export default function Cases() {
             <select id="nd" className="input" value={newDomain} onChange={(e) => setNewDomain(e.target.value)}><option value="">Detect automatically</option>{doms.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}</select>
             <button className="btn-primary mt-3 w-full" disabled={busy || text.trim().length < 10} onClick={() => void create()}>{busy ? "Analysing…" : "Open case"}</button></div>
         </div>
-        <div className="mt-4"><p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Examples (click to fill)</p>
+        <div className="mt-4"><p className="mb-2 text-xs font-semibold text-muted">Examples (click to fill)</p>
           <ul className="flex flex-wrap gap-2">{doms.map((d) => <li key={d.id}><button className="min-h-[36px] rounded-full border border-line bg-soft px-3 text-xs font-semibold hover:border-indigo" onClick={() => { setText(EXAMPLES[d.id] ?? ""); setNewDomain(d.id); }}>{d.label}</button></li>)}</ul></div>
       </section>
 
@@ -75,7 +75,7 @@ export default function Cases() {
             <li key={c.id}><Link href={`/app/cases/${c.id}`} className="card grid gap-3 p-5 hover:border-indigo md:grid-cols-[1fr_200px] md:items-center">
               <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><Tag tone={STATUS_TONE[c.status] ?? "soft"}>{c.status.replaceAll("_", " ").toLowerCase()}</Tag><Tag>{c.domain_label}</Tag>{c.overdue && <Tag tone="danger">follow-up overdue</Tag>}{c.missing > 0 && <Tag tone="indigo">{c.missing} fact(s) needed</Tag>}</div>
                 <p className="mt-2 truncate text-base font-bold">{c.title}</p>
-                <p className="text-xs text-muted">{c.provider ?? "—"} · {c.claimed_paise ? inr(c.claimed_paise) + " at stake · " : ""}stage {c.stage.replaceAll("_", " ").toLowerCase()} · updated {when(c.updated_at)}</p></div>
+                <p className="text-xs text-muted">{c.provider ?? "—"}, {c.claimed_paise ? inr(c.claimed_paise) + " at stake, " : ""}stage {c.stage.replaceAll("_", " ").toLowerCase()}, updated {when(c.updated_at)}</p></div>
               <div><p className="mb-1 text-xs font-semibold text-muted">Analysis confidence</p><Meter value={c.confidence ?? 0} tone="indigo" label="Confidence" /></div>
             </Link></li>))}</ul>)}
         <div className="mt-4 flex items-center justify-between text-sm text-muted"><span>{total} case{total === 1 ? "" : "s"}</span>

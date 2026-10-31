@@ -55,9 +55,9 @@ export default function CaseWorkspace({ params }: { params: Promise<{ id: string
     <div className="mx-auto max-w-6xl space-y-5">
       <header>
         <div className="flex flex-wrap items-center gap-2"><Tag tone="indigo">{c.domain_label}</Tag><Tag tone={c.status === "RESOLVED" ? "teal" : c.status === "UNRESOLVED" ? "danger" : "amber"}>{c.status.replaceAll("_", " ").toLowerCase()}</Tag>
-          {c.overdue && <Tag tone="danger">follow-up overdue</Tag>}{c.mission_id && <a href={`/app/missions/${c.mission_id}`} className="badge bg-soft text-indigo">from mission →</a>}</div>
-        <h1 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">{c.title}</h1>
-        <p className="mt-1 text-sm text-muted">{c.provider ?? "provider not identified"} · {c.claimed_paise ? `${inr(c.claimed_paise)} at stake · ` : ""}incident {c.incident_date ?? "date unknown"} · follow-up by {c.followup_date ?? "—"} · case <code>{c.id}</code></p>
+          {c.overdue && <Tag tone="danger">follow-up overdue</Tag>}{c.mission_id && <a href={`/app/missions/${c.mission_id}`} className="badge bg-soft text-indigo">from mission</a>}</div>
+        <h1 className="mt-2 text-2xl font-normal tracking-tight sm:text-3xl">{c.title}</h1>
+        <p className="mt-1 text-sm text-muted">{c.provider ?? "provider not identified"}, {c.claimed_paise ? `${inr(c.claimed_paise)} at stake, ` : ""}incident {c.incident_date ?? "date unknown"}, follow-up by {c.followup_date ?? "—"}, case <code>{c.id}</code></p>
       </header>
       <Stepper stages={c.stages} current={c.stage} reached={reached} />
       <ErrorNote error={error} />
@@ -77,8 +77,8 @@ export default function CaseWorkspace({ params }: { params: Promise<{ id: string
             <section className="card" aria-labelledby="an-h"><h2 id="an-h" className="text-lg font-bold">Analysis</h2>
               <p className="mt-2 text-sm">{c.analysis.summary}</p>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <div><p className="text-xs font-bold uppercase tracking-wide text-muted">Confidence</p><div className="mt-1"><Meter value={c.analysis.confidence} tone="indigo" label="Analysis confidence" /></div><p className="mt-1 text-xs text-muted">{c.analysis.confidence_explanation}</p></div>
-                <div><p className="text-xs font-bold uppercase tracking-wide text-muted">Evidence checklist</p><div className="mt-1"><Meter value={cov} max={c.checklist.length} label="Checklist coverage" /></div><p className="mt-1 text-xs text-muted">{cov} of {c.checklist.length} items covered</p></div></div>
+                <div><p className="text-xs font-bold text-muted">Confidence</p><div className="mt-1"><Meter value={c.analysis.confidence} tone="indigo" label="Analysis confidence" /></div><p className="mt-1 text-xs text-muted">{c.analysis.confidence_explanation}</p></div>
+                <div><p className="text-xs font-bold text-muted">Evidence checklist</p><div className="mt-1"><Meter value={cov} max={c.checklist.length} label="Checklist coverage" /></div><p className="mt-1 text-xs text-muted">{cov} of {c.checklist.length} items covered</p></div></div>
               <div className="mt-5 grid gap-5 sm:grid-cols-2">
                 <div><h3 className="text-sm font-bold">Established by documents</h3>{c.analysis.established_facts.length ? <ul className="mt-2 space-y-1.5 text-sm">{c.analysis.established_facts.map((f, i) => <li key={i} className="flex gap-2"><span className="text-teal"><Icon name="check" size={14} /></span><span>{f.claim}<span className="block text-xs text-muted">{f.support[0]?.filename}{f.support[0]?.quote ? ` — “…${f.support[0].quote}…”` : ""}</span></span></li>)}</ul> : <p className="mt-2 text-sm text-muted">Nothing yet. Attach documents to support your claims.</p>}</div>
                 <div><h3 className="text-sm font-bold">Stated but not yet supported</h3>{c.analysis.uncertain_claims.length ? <ul className="mt-2 space-y-1.5 text-sm">{c.analysis.uncertain_claims.map((f, i) => <li key={i} className="flex gap-2"><Tag tone={FACT_TONE[f.status] ?? "amber"}>{f.status.toLowerCase()}</Tag><span>{f.claim}{f.support[0]?.note && <span className="block text-xs text-danger">{f.support[0].note}</span>}</span></li>)}</ul> : <p className="mt-2 text-sm text-muted">None.</p>}</div></div>
@@ -101,7 +101,7 @@ export default function CaseWorkspace({ params }: { params: Promise<{ id: string
               <div><input ref={fileRef} type="file" className="sr-only" aria-label="Upload evidence" accept=".txt,.md,.csv,.pdf,.png,.jpg,.jpeg" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f); e.target.value = ""; }} />
                 <button className="btn-primary" disabled={busy || locked} onClick={() => fileRef.current?.click()}>Upload evidence</button></div></div>
               <ul className="mt-3 divide-y divide-line">{c.checklist.map((x) => (<li key={x.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm"><span className="flex items-center gap-2"><span className={x.covered ? "text-teal" : "text-muted"}><Icon name={x.covered ? "check" : "alert"} size={16} /></span>{x.label}</span>
-                <span className="text-xs text-muted">{x.document ? `${x.document.filename} · strength ${Math.round(x.strength * 100)}%` : "missing"}</span></li>))}</ul>
+                <span className="text-xs text-muted">{x.document ? `${x.document.filename}, strength ${Math.round(x.strength * 100)}%` : "missing"}</span></li>))}</ul>
               <div className="mt-3 flex flex-wrap items-center gap-2"><label htmlFor="link" className="text-sm font-semibold">Use a file already in your vault:</label>
                 <select id="link" className="input !min-h-[40px] max-w-xs" defaultValue="" onChange={(e) => { const v = e.target.value; e.target.value = ""; if (v) { const f = new FormData(); f.append("document_id", v); void act(async () => (await api<{ case: CaseView }>(`/cases/${id}/documents`, { form: f })).case, "Linked from your vault."); } }}>
                   <option value="">Choose…</option>{vault.map((d) => <option key={d.id} value={d.id}>{d.filename}</option>)}</select></div></section>
@@ -151,7 +151,7 @@ export default function CaseWorkspace({ params }: { params: Promise<{ id: string
                 <div className="mt-3 flex flex-wrap items-end gap-3"><div><label className="label" htmlFor="ak">Action</label><select id="ak" className="input" value={actionKey} onChange={(e) => setActionKey(e.target.value)}>{c.ranking.ranked.map((r) => <option key={r.key} value={r.key}>{r.name.slice(0, 60)}</option>)}</select></div>
                   <button className="btn-teal" disabled={busy || draftDirty || c.missing.length > 0} onClick={() => void act(() => api(`/cases/${id}/approve`, { body: { action_key: actionKey, digest: c.draft!.approval_digests[actionKey] } }), "Approved.")}>Approve this draft</button></div>
                 {draftDirty && <p className="mt-2 text-xs text-danger">Save or discard your edits first.</p>}{c.approval && <p className="mt-2 text-sm text-teal">Approved action: {c.approval.action_key} (draft v{c.approval.draft_version}) — {c.approval_valid ? "valid" : "no longer valid"}.</p>}</div>)}
-              <div className="mt-6"><h3 className="text-sm font-bold">Version history</h3><ul className="mt-2 text-sm">{c.drafts.map((d) => <li key={d.version} className="flex gap-3 py-1"><span className="font-semibold">v{d.version}</span><span className="text-muted">{d.origin.replace("_", " ")} · {d.status.toLowerCase()} · {d.hash} · {when(d.created_at)}</span></li>)}</ul></div>
+              <div className="mt-6"><h3 className="text-sm font-bold">Version history</h3><ul className="mt-2 text-sm">{c.drafts.map((d) => <li key={d.version} className="flex gap-3 py-1"><span className="font-semibold">v{d.version}</span><span className="text-muted">{d.origin.replace("_", " ")}, {d.status.toLowerCase()}, {d.hash}, {when(d.created_at)}</span></li>)}</ul></div>
             </>)}</section>)}
 
           {tab === "track" && (<>

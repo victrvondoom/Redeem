@@ -36,9 +36,9 @@ export default function Domains() {
       <div><label className="sr-only" htmlFor="dq">Search domains</label><input id="dq" className="input max-w-sm" placeholder="Search domains, fields, regulators…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
       {tab === "rights" && <ul className="grid gap-4 md:grid-cols-2">{rd.filter((d) => !ql || JSON.stringify(d).toLowerCase().includes(ql)).map((d) => (
         <li key={d.id} className="card"><div className="flex flex-wrap items-start justify-between gap-2"><h2 className="text-lg font-bold">{d.label}</h2><div className="flex gap-2"><Tag tone="teal">{d.status.replaceAll("_", " ").toLowerCase()}</Tag>{d.my_cases > 0 && <Tag tone="indigo">{d.my_cases} of your cases</Tag>}</div></div>
-          <p className="mt-1 text-sm text-muted">{d.is_dispute ? `Counterparty: ${d.counterparty} · Regulator: ${d.regulator}` : "Administrative support only — never clinical advice."}</p>
+          <p className="mt-1 text-sm text-muted">{d.is_dispute ? `Counterparty: ${d.counterparty}, Regulator: ${d.regulator}` : "Administrative support only — never clinical advice."}</p>
           <dl className="mt-3 space-y-1.5 text-sm"><div><dt className="inline font-semibold">Needs: </dt><dd className="inline">{d.intake_fields.filter((f) => f.critical).map((f) => f.key.replaceAll("_", " ")).join(", ") || "issue description"}</dd></div>
-            <div><dt className="inline font-semibold">Evidence checked: </dt><dd className="inline">{d.evidence_checklist.map((e) => e.label.split(" (")[0]).join(" · ")}</dd></div>
+            <div><dt className="inline font-semibold">Evidence checked: </dt><dd className="inline">{d.evidence_checklist.map((e) => e.label.split(" (")[0]).join(", ")}</dd></div>
             <div><dt className="inline font-semibold">Knowledge: </dt><dd className="inline">{Object.entries(d.corpus).map(([k, n]) => `${n} ${k.replaceAll("_", " ")}`).join(", ")}</dd></div>
             <div><dt className="inline font-semibold">Filing: </dt><dd className="inline text-muted">{d.filing_channel}</dd></div></dl>
           <button className="mt-3 text-sm font-semibold text-indigo underline" aria-expanded={open === d.id} onClick={() => setOpen(open === d.id ? null : d.id)}>{open === d.id ? "Hide workflow" : "Show workflow"}</button>

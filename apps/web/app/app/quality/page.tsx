@@ -32,7 +32,7 @@ export default function Quality() {
             <td>{r.status === "DONE" ? <a className="font-semibold text-indigo underline" href={`/api/v1/quality/runs/${r.id}/raw`}>JSON</a> : <span className="text-danger text-xs">{r.error}</span>}</td></tr>))}</tbody></table></div>}</section>
       {q && (<>
         {q.benchmark && (<section className="card" aria-labelledby="bm-h"><div className="flex flex-wrap items-center gap-2"><h2 id="bm-h" className="text-lg font-bold">Policy benchmark &amp; ablations</h2><Tag tone="indigo">Local fixtures</Tag></div>
-          <p className="mt-1 text-sm text-muted">Seed {q.benchmark.seed} · {q.benchmark.trials_per_cell} trials per scenario per policy · generated {q.benchmark.generated_at.slice(0, 10)}. {q.benchmark.scope}.</p>
+          <p className="mt-1 text-sm text-muted">Seed {q.benchmark.seed}, {q.benchmark.trials_per_cell} trials per scenario per policy, generated {q.benchmark.generated_at.slice(0, 10)}. {q.benchmark.scope}.</p>
           <div className="mt-4 overflow-x-auto"><table className="w-full min-w-[640px] text-sm"><thead><tr className="border-b border-line text-left text-muted">
             {["Policy", "n", "Correct", "Verified", "Wrong target", "Duplicates", "False success", "Unauthorized"].map((h) => <th key={h} className="py-2 pr-3 font-semibold">{h}</th>)}</tr></thead>
             <tbody>{Object.entries(q.benchmark.summary).map(([name, v]) => (<tr key={name} className="border-b border-line"><td className="py-2 pr-3 font-semibold">{name.replaceAll("_", " ")}</td>
@@ -46,7 +46,7 @@ export default function Quality() {
           <dl className="mt-4 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">{rows(q.fixture_results, ["label", "language_breakdown", "missions_by_status"]).map(([k, v]) => (
             <div key={k} className="flex justify-between border-b border-line py-1.5"><dt className="text-muted">{k.replaceAll("_", " ")}</dt><dd className="font-semibold">{show(v)}</dd></div>))}</dl>
           <h3 className="mt-5 font-semibold">By language detected</h3>
-          <p className="text-sm text-muted">{Object.entries(q.fixture_results.language_breakdown).map(([l, v]) => `${l}: ${v.verified}/${v.missions} verified`).join(" · ") || "No missions yet"}</p></section>
+          <p className="text-sm text-muted">{Object.entries(q.fixture_results.language_breakdown).map(([l, v]) => `${l}: ${v.verified}/${v.missions} verified`).join(", ") || "No missions yet"}</p></section>
         <section className="card"><div className="flex flex-wrap items-center gap-2"><h2 className="text-lg font-bold">Voice calls</h2><Tag tone="amber">Live provider</Tag></div>
           <p className="mt-1 text-sm text-muted">{q.live_provider_results.label}</p>
           <dl className="mt-4 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">{rows(q.live_provider_results, ["label", "note"]).map(([k, v]) => (

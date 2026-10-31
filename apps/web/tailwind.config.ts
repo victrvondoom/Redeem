@@ -10,9 +10,10 @@ export default {
         bg: v("bg"), ink: v("ink"), surface: v("surface"), soft: v("soft"), line: v("line"),
         indigo: { DEFAULT: v("indigo"), soft: v("indigo-soft") }, deep: v("deep"),
         teal: { DEFAULT: v("teal"), soft: v("teal-soft") }, amber: { DEFAULT: v("amber"), soft: v("amber-soft") },
-        muted: v("muted"), danger: { DEFAULT: v("danger"), soft: v("danger-soft") },
+        muted: v("muted"), accent: v("accent"), danger: { DEFAULT: v("danger"), soft: v("danger-soft") },
       },
       fontFamily: {
+        display: ["Gloock", "Georgia", "serif"],
         sans: ["Manrope", "Noto Sans Devanagari", "Noto Sans Tamil", "Noto Sans Telugu", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       borderRadius: { xl: "14px", "2xl": "20px" },

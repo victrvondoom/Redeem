@@ -20,7 +20,7 @@ export function Starfield({ className = "" }: { className?: string }) {
         const x = w / 2 + (s.x + mx * 0.06) * k * w * 0.12, y = h / 2 + (s.y + my * 0.06) * k * h * 0.12;
         if (x < 0 || x > w || y < 0 || y > h) continue;
         const a = Math.min(1, (1 - s.z) * 1.4), r = Math.max(0.4, (1 - s.z) * 2.4);
-        ctx.beginPath(); ctx.fillStyle = `rgba(120,255,170,${a * 0.8})`; ctx.shadowColor = "rgba(52,211,102,.9)"; ctx.shadowBlur = r * 4;
+        ctx.beginPath(); ctx.fillStyle = `rgba(120,255,170,${a * 0.8})`; 
         ctx.arc(x, y, r, 0, 6.283); ctx.fill();
       }
       if (!reduce) raf = requestAnimationFrame(draw);
@@ -84,7 +84,7 @@ function LogoPlate({ file, name }: { file: string; name: string }) {
     <span className="grid h-full w-full place-items-center rounded-[14%] bg-[#f3efe9] p-[14%] text-[#1a1614]">
       {ok ? // eslint-disable-next-line @next/next/no-img-element
         <img src={`/brand/${file}`} alt={`${name} logo`} onError={() => setOk(false)} className="max-h-full max-w-full object-contain" />
-        : <span className="text-center text-[0.8rem] font-extrabold uppercase tracking-widest">{name}</span>}
+        : <span className="text-center text-[0.8rem] font-extrabold ">{name}</span>}
     </span>
   );
 }
@@ -130,7 +130,7 @@ export function Intro() {
       <div className="intro-world" aria-hidden="true">
         <div className="intro-box intro-box-l"><Cube file="bolna.svg" name="Bolna" /></div>
         <div className="intro-box intro-box-r"><Cube file="wispr-flow.svg" name="Wispr Flow" /></div>
-        <div className="intro-flash" /><div className="intro-ring" />
+        <div className="intro-ring" />
         <div className="intro-emblem"><span>R</span></div>
       </div>
       <div className="intro-title">

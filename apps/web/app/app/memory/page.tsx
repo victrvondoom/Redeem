@@ -75,10 +75,10 @@ export default function MemoryCenter() {
         <ul className="space-y-3">{data?.items.map((m) => (
           <li key={m.id} className="card !p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0"><p className="text-xs font-bold uppercase tracking-widest text-muted">{m.label}</p>
+              <div className="min-w-0"><p className="text-xs font-bold text-muted">{m.label}</p>
                 {edit?.id === m.id ? (<div className="mt-1 flex gap-2"><input className="input" aria-label="Corrected value" value={edit.v} onChange={(e) => setEdit({ id: m.id, v: e.target.value })} /><button className="btn-primary" disabled={busy} onClick={() => void act(async () => { await api(`/memory/${m.id}/confirm`, { method: "POST", body: { value: edit.v } }); setEdit(null); })}>Save</button></div>)
                   : <p className="mt-0.5 text-xl font-bold">{m.value}</p>}
-                <p className="mt-1 text-sm text-muted">{m.quote && <>“{m.quote}” · </>}{SRC[m.source_kind] ?? m.source_kind}{m.source_ref ? ` ${m.source_ref}` : ""}{m.segment ? ` · line ${m.segment}` : ""} · {m.explicit ? "explicit" : "inferred"} · confidence {Math.round(m.confidence * 100)}%{m.expires_at ? ` · expires ${m.expires_at.slice(0, 10)}` : ""}</p></div>
+                <p className="mt-1 text-sm text-muted">{m.quote && <>“{m.quote}”, </>}{SRC[m.source_kind] ?? m.source_kind}{m.source_ref ? ` ${m.source_ref}` : ""}{m.segment ? `, line ${m.segment}` : ""}, {m.explicit ? "explicit" : "inferred"}, confidence {Math.round(m.confidence * 100)}%{m.expires_at ? `, expires ${m.expires_at.slice(0, 10)}` : ""}</p></div>
               <div className="flex flex-wrap items-center gap-2">{m.simulated && <Tag tone="amber">simulated</Tag>}{m.pinned && <Tag tone="indigo">pinned</Tag>}
                 <Tag tone={m.status === "confirmed" ? "teal" : m.status === "rejected" ? "danger" : "amber"}>{m.status === "proposed" ? "needs your confirmation" : m.status}</Tag></div>
             </div>
@@ -96,7 +96,7 @@ export default function MemoryCenter() {
           <button className="btn-ghost text-danger" disabled={busy || !turns?.length} onClick={() => { if (confirm("Forget your saved conversation context?")) void act(() => api("/context", { method: "DELETE" })); }}>Forget context</button></div>
         <p className="mt-1 text-sm text-muted">What you and REDEEM said, per mission or call, kept so short follow-ups (“also move my hotel”) keep their context. Encrypted at rest; only you can see it.</p>
         {turns && turns.length === 0 && <p className="mt-3 text-sm text-muted">Nothing yet. Start a mission and it appears here.</p>}
-        <ol className="mt-3 max-h-80 space-y-1.5 overflow-y-auto" aria-label="Conversation turns">{turns?.map((t) => (<li key={t.id} className={`rounded-xl px-3 py-2 text-sm ${t.role === "user" ? "bg-soft" : "border border-line"}`}><span className="mr-2 text-xs font-bold uppercase tracking-wider text-teal">{t.role === "user" ? "You" : "REDEEM"} · {t.channel}</span>{t.text}</li>))}</ol>
+        <ol className="mt-3 max-h-80 space-y-1.5 overflow-y-auto" aria-label="Conversation turns">{turns?.map((t) => (<li key={t.id} className={`rounded-xl px-3 py-2 text-sm ${t.role === "user" ? "bg-soft" : "border border-line"}`}><span className="mr-2 text-xs font-bold text-teal">{t.role === "user" ? "You" : "REDEEM"}, {t.channel}</span>{t.text}</li>))}</ol>
       </section>
     </div>
   );

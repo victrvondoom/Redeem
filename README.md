@@ -43,7 +43,7 @@ Geometry is documented in the SVG (width 120, depth 120, extrusion 36, bevel 8; 
 
 <img src="docs/media/live-engine.gif" alt="Live Engine playback" width="100%"/>
 
-<img src="docs/screenshots/v4/live-engine.png" alt="Live Engine after completion" width="100%"/>
+<img src="docs/screenshots/v5/live-engine.png" alt="Live Engine after completion" width="100%"/>
 
 The run executes now on local fixtures; playback is read from the append-only, hash-chained event log. MP4: [`docs/media/live-engine.mp4`](docs/media/live-engine.mp4).
 </details>
@@ -51,11 +51,11 @@ The run executes now on local fixtures; playback is read from the append-only, h
 <details open>
 <summary><b>Landing, Memory Center, Privacy Center, Memory Graph</b></summary>
 
-<img src="docs/screenshots/v4/landing-hero.png" alt="Landing hero" width="100%"/>
+<img src="docs/screenshots/v5/landing-hero.png" alt="Landing hero" width="100%"/>
 
 | Memory Center | Privacy Center |
 |---|---|
-| <img src="docs/screenshots/v4/memory-center.png" alt="Memory Center"/> | <img src="docs/screenshots/v4/privacy.png" alt="Privacy Center"/> |
+| <img src="docs/screenshots/v5/memory-center.png" alt="Memory Center"/> | <img src="docs/screenshots/v5/privacy.png" alt="Privacy Center"/> |
 </details>
 
 <details>
@@ -63,13 +63,13 @@ The run executes now on local fixtures; playback is read from the append-only, h
 
 | Command Center | Cases |
 |---|---|
-| <img src="docs/screenshots/v4/console.png" alt="Command Center"/> | <img src="docs/screenshots/v4/cases.png" alt="Cases"/> |
+| <img src="docs/screenshots/v5/console.png" alt="Command Center"/> | <img src="docs/screenshots/v5/cases.png" alt="Cases"/> |
 | **Memory Graph** | **History timeline** |
-| <img src="docs/screenshots/v4/graph.png" alt="Memory Graph"/> | <img src="docs/screenshots/v4/history.png" alt="History timeline"/> |
+| <img src="docs/screenshots/v5/graph.png" alt="Memory Graph"/> | <img src="docs/screenshots/v5/history.png" alt="History timeline"/> |
 | **Voice Studio** | |
-| <img src="docs/screenshots/v4/voice.png" alt="Voice Studio"/> | |
+| <img src="docs/screenshots/v5/voice.png" alt="Voice Studio"/> | |
 
-Full landing page: [`docs/screenshots/v4/landing-full.png`](docs/screenshots/v4/landing-full.png)
+Full landing page: [`docs/screenshots/v5/landing-full.png`](docs/screenshots/v5/landing-full.png)
 </details>
 
 ## What is real today

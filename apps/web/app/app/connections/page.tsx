@@ -32,7 +32,7 @@ export default function Connections() {
         <ul className="space-y-2">{mf.map((m) => { const h = health.find((x) => x.provider === m.provider); return (
           <li key={m.provider} className="card p-4 text-sm"><div className="flex flex-wrap items-center gap-2"><strong>{m.provider.replaceAll("_", " ")}</strong><Tag tone={m.condition === "FIXTURE_VERIFIED" ? "indigo" : "amber"}>{m.condition}</Tag>
             {h && <Tag tone={h.healthy ? "teal" : "soft"}>{h.healthy ? "healthy" : h.detail}</Tag>}</div>
-            <p className="mt-1 text-xs text-muted">Auth: {m.auth} · Can: {m.capabilities.join(", ")} · Verification: {m.verification} · Idempotency: {m.idempotency} · Retry: {m.retry}</p>{m.notes && <p className="text-xs text-muted">{m.notes}</p>}</li>); })}</ul></section>
+            <p className="mt-1 text-xs text-muted">Auth: {m.auth}, Can: {m.capabilities.join(", ")}, Verification: {m.verification}, Idempotency: {m.idempotency}, Retry: {m.retry}</p>{m.notes && <p className="text-xs text-muted">{m.notes}</p>}</li>); })}</ul></section>
     </div>
   );
 }

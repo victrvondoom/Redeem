@@ -37,7 +37,7 @@ export default function Shell({ children }: { children: ReactNode }) {
   const nav = (
     <nav aria-label="App" className="flex flex-col gap-5 px-3 pb-6">
       {SECTIONS.map((s) => (
-        <div key={s.title}><p className="mb-1 px-3 text-[11px] font-bold uppercase tracking-wider text-muted">{s.title}</p>
+        <div key={s.title}><p className="mb-1 px-3 text-[11px] font-bold text-muted">{s.title}</p>
           {s.items.map(([href, k, icon, b]) => {
             const n = href === "/app" ? badges["/app"] : b ? badges[b] : undefined;
             return (

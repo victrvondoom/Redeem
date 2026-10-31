@@ -13,7 +13,7 @@ async function register(page: Page) {
 test("demo scenario A: one request → one coordinated multi-domain mission with evidence", async ({ page }) => {
   await register(page);
   await page.getByRole("link", { name: "Demo", exact: true }).click();
-  await page.locator("li", { hasText: "A · Consumer super-agent" }).getByRole("button", { name: "Run scenario" }).click();
+  await page.locator("li", { hasText: "A. Consumer super-agent" }).getByRole("button", { name: "Run scenario" }).click();
   await page.getByRole("link", { name: /Open mission, ledger and evidence/ }).click();
   await expect(page.getByRole("heading", { name: /Receipt — Done and verified/ })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("Prepare family message (draft, not sent)")).toBeVisible();
@@ -32,7 +32,7 @@ test("demo scenario A: one request → one coordinated multi-domain mission with
 test("demo scenario C: adversarial recovery proves one effect", async ({ page }) => {
   await register(page);
   await page.goto("/app/demo");
-  await page.locator("li", { hasText: "C · Adversarial recovery" }).getByRole("button", { name: "Run scenario" }).click();
+  await page.locator("li", { hasText: "C. Adversarial recovery" }).getByRole("button", { name: "Run scenario" }).click();
   await expect(page.getByText(/stale approval replay blocked: true/)).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText(/on intended booking: 1/)).toBeVisible();
   await expect(page.getByText(/on wrong booking: 0/)).toBeVisible();
@@ -41,7 +41,7 @@ test("demo scenario C: adversarial recovery proves one effect", async ({ page })
 test("demo scenario B: retail operator verifies stock and CRM", async ({ page }) => {
   await register(page);
   await page.goto("/app/demo");
-  await page.locator("li", { hasText: "B · Indian retail operator" }).getByRole("button", { name: "Run scenario" }).click();
+  await page.locator("li", { hasText: "B. Indian retail operator" }).getByRole("button", { name: "Run scenario" }).click();
   await page.getByRole("link", { name: /Open mission/ }).click();
   await expect(page.getByRole("heading", { name: /Receipt — Done and verified/ })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText(/"stock_now": 2/)).toBeVisible();
@@ -85,7 +85,7 @@ test("first-use checklist reflects real progress", async ({ page }) => {
 test("mobile: mission page with evidence has no overflow at 390 and 360", async ({ page }) => {
   await register(page);
   await page.goto("/app/demo");
-  await page.locator("li", { hasText: "A · Consumer super-agent" }).getByRole("button", { name: "Run scenario" }).click();
+  await page.locator("li", { hasText: "A. Consumer super-agent" }).getByRole("button", { name: "Run scenario" }).click();
   await page.getByRole("link", { name: /Open mission/ }).click();
   await expect(page.getByRole("heading", { name: "Evidence Center" })).toBeVisible({ timeout: 15_000 });
   for (const w of [390, 360]) {
