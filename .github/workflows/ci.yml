@@ -9,6 +9,7 @@ jobs:
         with: { python-version: "3.12" }
       - run: pip install -r apps/api/requirements.txt && python -m playwright install --with-deps chromium
       - run: python scripts/sync_readme.py --check
+      - run: python scripts/build_system_design.py --check
       - run: ruff check apps/api/app
       - run: cd apps/api && python -m pytest -q
   web:

@@ -35,3 +35,6 @@ Backend 240 (+1 skipped live test), E2E 43. New: real OCR (RapidOCR) with review
 
 ## Skills, projects, logos pass (latest)
 Backend 245 passed, 1 skipped (live Google test, no credentials); E2E 46 passed; ruff, tsc, eslint, next build green. New: recorded browser skills with live pause/resume/stop (`resolve/skills.py`, `/app/skills`), Project Store (`/app/projects`), migration 0010, official Bolna and Wispr Flow logos, `browser_available()` now detects Playwright-managed Chromium (CI). No provider credentials were present in this environment. Next: DevOps/Science/Creative adapters; reconcile RUNNING skill runs at startup.
+
+## System-design trail pass (latest)
+Backend 246 passed, 1 skipped; tsc/eslint(0 errors, 21 pre-existing react-hooks warnings)/ruff green. New: `docs/system-design/index.html` (20-topic visual guide with an evidence-based audit of what REDEEM implements; regenerate with `python scripts/build_system_design.py`, checked in CI), and 429 responses now carry `Retry-After` + `retry_after_seconds`. Audit result: 3 implemented, 10 partial, 7 not implemented (caching, load balancer, K8s, backoff+jitter, queue/DLQ, pub/sub, cron). Venv note: use Python 3.12 (rapidocr has no 3.13 wheels).

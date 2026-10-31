@@ -42,15 +42,15 @@ async def correlation(request: Request, call_next):
     return resp
 
 
-def _body(request: Request, code: str, message: str, status: int, **extra):
+def _body(request: Request, code: str, message: str, status: int, headers: dict | None = None, **extra):
     return JSONResponse({"error": {"code": code, "message": message, "correlation_id": getattr(request.state, "cid", None),
-                                   **extra}}, status_code=status)
+                                   **extra}}, status_code=status, headers=headers)
 
 
 @app.exception_handler(HTTPException)
 async def http_exc(request: Request, exc: HTTPException):
     d = exc.detail if isinstance(exc.detail, dict) else {"code": "http_error", "message": str(exc.detail)}
-    return _body(request, d.pop("code", "error"), d.pop("message", ""), exc.status_code, **d)
+    return _body(request, d.pop("code", "error"), d.pop("message", ""), exc.status_code, headers=exc.headers, **d)
 
 
 @app.exception_handler(EngineError)
