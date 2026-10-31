@@ -10,7 +10,7 @@ export function SiteNav() {
   const links = [["#product", "nav.product"], ["#how", "nav.how"], ["#solutions", "nav.solutions"], ["#security", "nav.security"],
     ["#business", "nav.business"], ["#developers", "nav.developers"]] as const;
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-bg/90 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-line/70 bg-bg/70 backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2 sm:px-6">
         <Link href="/" aria-label="REDEEM home"><Logo /></Link>
         <nav aria-label="Primary" className="hidden items-center gap-5 lg:flex">

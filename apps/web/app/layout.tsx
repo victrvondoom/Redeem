@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   title: "REDEEM — Speak your need. We take the lead.",
   description: "Voice-first agent platform that takes authorized action across services and independently verifies the outcome.",
 };
-export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#FAF9F6" };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#05070C" };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

@@ -6,6 +6,7 @@ from sqlalchemy import JSON, BigInteger, Boolean, CheckConstraint, ForeignKey, I
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .db import Base, UTCDateTime, utcnow
+from .security.vault import EncryptedText
 
 
 def new_id(prefix: str) -> str:
@@ -202,7 +203,7 @@ class Document(Base):
     sha256: Mapped[str] = mapped_column(String(64))
     version: Mapped[int] = mapped_column(Integer, default=1)
     size: Mapped[int] = mapped_column(Integer)
-    text_content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    text_content: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
     extracted: Mapped[dict] = mapped_column(JSON, default=dict)
     case_id: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True)
     domain: Mapped[str | None] = mapped_column(String(30), nullable=True)

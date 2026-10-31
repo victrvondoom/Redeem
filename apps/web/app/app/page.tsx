@@ -75,7 +75,7 @@ export default function CommandCenter() {
               <div className="flex flex-wrap items-center gap-2">
                 <label className="sr-only" htmlFor="mq">Search missions</label>
                 <input id="mq" className="input !min-h-[40px] w-44" placeholder="Search missions" value={q} onChange={(e) => setQ(e.target.value)} />
-                {["active", "done", "stopped", "all"].map((f) => <button key={f} onClick={() => setFilter(f)} aria-pressed={filter === f} className={`badge min-h-[32px] ${filter === f ? "bg-deep text-white" : "bg-soft text-muted"}`}>{f}</button>)}
+                {["active", "done", "stopped", "all"].map((f) => <button key={f} onClick={() => setFilter(f)} aria-pressed={filter === f} className={`badge min-h-[32px] ${filter === f ? "bg-teal text-deep" : "bg-soft text-muted"}`}>{f}</button>)}
               </div></div>
             {rows === null ? <p className="text-muted" role="status">Loading…</p> : shown.length ? (
               <ul className="space-y-2">{shown.map((r) => (

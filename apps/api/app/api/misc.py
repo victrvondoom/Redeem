@@ -5,7 +5,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Query, UploadFile
 from fastapi.responses import Response
-from sqlalchemy import delete, func, or_, select, text
+from sqlalchemy import delete, func, select, text
 
 from ..config import settings
 from ..core.deps import Ctx, audit, current_ctx, err
@@ -19,6 +19,7 @@ from ..models import (Action, ActionApproval, ActionEvent, AuditEvent, AuthSessi
 from ..models import FxCalendarEvent, FxCase, FxContact, FxFlightOption, FxLead, FxMessage
 from ..policy.payment_safety import scan
 from ..reclaim import docintel
+from ..security import vault
 from ..models import BenchmarkRun, BrowserSessionRow, BrowserSnapshot, Case, CaseDraft, CaseEvent, EvidenceClaim, MissionTask
 from ..schemas import ScanIn
 
@@ -33,6 +34,19 @@ MAX_UPLOAD = 5_000_000
 def health(db=Depends(get_db)):
     db.execute(text("SELECT 1"))
     return {"status": "ok", "db": "ok", "time": utcnow().isoformat()}
+
+
+@router.get("/public/stats")
+def public_stats(db=Depends(get_db)):
+    """Unauthenticated, aggregate-only counters read live from this deployment's database. No tenant-identifying data."""
+    from ..reclaim.kb import kb as _kb
+    from ..models import ActionEvent as _AE
+    return {"verified_claims": db.scalar(select(func.count()).select_from(VerificationClaim).where(VerificationClaim.result == "VERIFIED")) or 0,
+            "ledger_events": db.scalar(select(func.count()).select_from(_AE)) or 0,
+            "missions": db.scalar(select(func.count()).select_from(Mission)) or 0,
+            "knowledge_passages": _kb().stats()["chunks"], "consumer_rights_domains": 8,
+            "encryption": "AES-256-GCM at rest (documents)", "scope": "this deployment only; fixtures included; not a customer metric",
+            "time": utcnow().isoformat()}
 
 
 @router.get("/domains")
@@ -109,8 +123,6 @@ async def upload(file: UploadFile = File(...), domain: str | None = None, ctx: C
 def list_documents(ctx: Ctx = Depends(current_ctx), q: str | None = Query(None, max_length=100), domain: str | None = None, doc_type: str | None = None,
                    case_id: str | None = None, sort: str = Query("created", pattern="^(created|strength|name)$"), limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     stmt = select(Document).where(Document.tenant_id == ctx.tenant_id)
-    if q:
-        stmt = stmt.where(or_(Document.filename.ilike(f"%{q}%"), Document.text_content.ilike(f"%{q}%")))
     if domain:
         stmt = stmt.where(Document.domain == domain)
     if doc_type:
@@ -118,6 +130,9 @@ def list_documents(ctx: Ctx = Depends(current_ctx), q: str | None = Query(None, 
     if case_id:
         stmt = stmt.where(Document.case_id == case_id)
     rows = list(ctx.db.scalars(stmt.order_by(Document.created_at.desc())))
+    if q:  # text is encrypted in the DB, so the content match happens after decryption
+        ql = q.lower()
+        rows = [d for d in rows if ql in d.filename.lower() or ql in (d.text_content or "").lower()]
     if sort == "strength":
         rows.sort(key=lambda d: -((d.strength or {}).get("score", 0)))
     elif sort == "name":
@@ -146,7 +161,7 @@ def download(doc_id: str, ctx: Ctx = Depends(current_ctx)):
     d = _doc(ctx, doc_id)
     body, ctype = (b"", "text/plain")
     if d.blob_path and Path(d.blob_path).is_file() and Path(d.blob_path).resolve().is_relative_to(Path(settings.data_dir).resolve()):
-        body, ctype = Path(d.blob_path).read_bytes(), "application/octet-stream"
+        body, ctype = vault.read_blob(d.blob_path, ctx.tenant_id), "application/octet-stream"
     else:
         body = (d.text_content or "").encode()
     return Response(body, media_type=ctype, headers={"Content-Disposition": f'attachment; filename="{d.filename}"', "X-Content-Type-Options": "nosniff"})

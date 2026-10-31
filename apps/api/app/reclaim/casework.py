@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from ..connectors.base import canonical
 from ..connectors.casedesk import CaseDeskConnector
 from ..db import utcnow
+from ..security import vault
 from ..models import Case, CaseDraft, CaseEvent, Document, EvidenceClaim
 from . import decision, kb, profiles, workflows
 
@@ -476,7 +477,7 @@ def bundle(db: Session, c: Case) -> bytes:
         for d in _docs(db, c):
             if d.blob_path:
                 try:
-                    z.write(d.blob_path, f"evidence/{d.filename}")
+                    z.writestr(f"evidence/{d.filename}", vault.read_blob(d.blob_path, c.tenant_id))
                 except OSError:
                     z.writestr(f"evidence/{d.filename}.MISSING.txt", "file bytes unavailable")
     return buf.getvalue()

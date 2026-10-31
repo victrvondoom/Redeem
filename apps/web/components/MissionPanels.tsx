@@ -72,8 +72,8 @@ export function EvidenceCenter({ missionId, refreshKey }: { missionId: string; r
         <div className="flex gap-2"><button className="btn-ghost" onClick={() => void download("md")}>Report (readable)</button><button className="btn-ghost" onClick={() => void download("json")}>Report (JSON)</button></div></div>
       {error && <p role="alert" className="mt-2 text-sm text-danger">{error}</p>}
       <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Filter by trust category">
-        <button className={`badge ${cat === "" ? "bg-deep text-white" : "bg-soft text-muted"}`} onClick={() => setCat("")}>All ({items.length})</button>
-        {cats.map((c) => <button key={c} title={CAT_HELP[c]} className={`badge ${cat === c ? "bg-deep text-white" : "bg-soft text-muted"}`} onClick={() => setCat(c)}>{c.replaceAll("_", " ").toLowerCase()}</button>)}</div>
+        <button className={`badge ${cat === "" ? "bg-teal text-deep" : "bg-soft text-muted"}`} onClick={() => setCat("")}>All ({items.length})</button>
+        {cats.map((c) => <button key={c} title={CAT_HELP[c]} className={`badge ${cat === c ? "bg-teal text-deep" : "bg-soft text-muted"}`} onClick={() => setCat(c)}>{c.replaceAll("_", " ").toLowerCase()}</button>)}</div>
       {shown.length === 0 ? <div className="mt-3"><Empty title="No evidence yet" /></div> : (
         <ul className="mt-3 space-y-2">{shown.map((e) => (
           <li key={e.id} className="rounded-xl border border-line p-3 text-sm"><div className="flex flex-wrap items-center gap-2"><Tag tone={CAT_TONE[e.category] ?? "soft"}>{e.category.replaceAll("_", " ")}</Tag><strong>{e.title}</strong></div>
@@ -93,8 +93,8 @@ export function AgentActivity({ missionId, refreshKey }: { missionId: string; re
   return (
     <section className="card" aria-labelledby="ag-h"><h2 id="ag-h" className="text-lg font-bold">Agent activity</h2>
       <p className="mt-1 text-sm text-muted">Each role has least-privilege capabilities; only the executor can dispatch an action.</p>
-      <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Filter by agent"><button className={`badge ${who === "" ? "bg-deep text-white" : "bg-soft text-muted"}`} onClick={() => setWho("")}>All</button>
-        {roles.map((r) => <button key={r} className={`badge ${who === r ? "bg-deep text-white" : "bg-soft text-muted"}`} onClick={() => setWho(r)}>{r}</button>)}</div>
+      <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Filter by agent"><button className={`badge ${who === "" ? "bg-teal text-deep" : "bg-soft text-muted"}`} onClick={() => setWho("")}>All</button>
+        {roles.map((r) => <button key={r} className={`badge ${who === r ? "bg-teal text-deep" : "bg-soft text-muted"}`} onClick={() => setWho(r)}>{r}</button>)}</div>
       <ul className="mt-3 space-y-1 text-sm">{shown.map((i) => (<li key={i.seq} className="flex gap-3"><span className="w-28 shrink-0 font-semibold">{i.agent}</span><span className="text-muted">{i.kind.replaceAll("_", " ")}</span></li>))}</ul>
     </section>
   );

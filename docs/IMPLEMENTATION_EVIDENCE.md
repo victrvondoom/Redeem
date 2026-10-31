@@ -47,3 +47,13 @@ No live Bolna call, no LLM, no OCR engine, no real filing/email/airline/bank, no
 ## External dependencies
 
 Bolna credentials/numbers, an LLM key, an OCR engine, production browser sandbox, Postgres — all required for any status above `LOCALLY_TESTED`.
+
+## Cinematic UX + encryption pass (latest)
+
+- New single-accent cinematic theme, 3D tilt cards, canvas starfield, 3D exploded stage stack, intro (RE from the left, DEEM from the right), scroll reveals — `apps/web/components/Cinematic.tsx`, `Showcase.tsx`, `app/page.tsx`, `app/globals.css`. All motion honours `prefers-reduced-motion`.
+- **Live Engine** (`/app/live`): runs a demo mission on the real engine, then replays its stored ledger events with play/pause/scrubber/speed; task DAG nodes light up as the events proving them arrive. Evidence: `docs/media/live-engine.gif|mp4`, `docs/screenshots/v2/live-*.png`. The landing "simulation loop" is illustrative and labelled so.
+- **Encryption at rest** (`apps/api/app/security/vault.py`): AES-256-GCM; file bytes keyed per tenant (HKDF, tenant id as AAD), extracted text encrypted via the `EncryptedText` column type. `tests/test_encryption.py` asserts raw DB rows/blobs hold no plaintext, owner download still works, other tenant gets 404 and cannot decrypt a copied blob, master key file is 0600. Limit: server-held key, not end-to-end.
+- `GET /api/v1/public/stats`: unauthenticated aggregate counters (tested to expose no tenant data).
+- Verification this pass: backend **199 passed**; Playwright **35 passed** (31 earlier + 4 new in `cinematic.spec.ts`); `tsc` clean; `eslint` 0 errors; `ruff check app` clean. A first run caught a real horizontal-overflow regression on the landing page (pre-reveal off-screen translate); fixed with `main { overflow-x: clip }` and re-verified.
+- README regenerated with embedded screenshots/GIFs and 3D SVGs (`scripts/build_readme_assets.py`; the Bolna/YC tiles are text marks, not official logos). Reusable prompt: `docs/CINEMATIC_UX_PROMPT.md`.
+- Not done / honest limits: no WebGL/three.js scene (CSS 3D + canvas only), so this is not Unreal/PS5-class rendering; the GIF/MP4 are assembled from Playwright screenshots, not a screen recording; Postgres and Docker still untested.

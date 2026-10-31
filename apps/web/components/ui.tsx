@@ -9,10 +9,10 @@ import { useAuth } from "@/lib/auth";
 export function Logo({ light = false }: { light?: boolean }) {
   return (
     <span className="inline-flex items-center gap-2 font-extrabold tracking-tight">
-      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
-        <rect width="28" height="28" rx="8" fill="rgb(var(--deep))" />
-        <path d="M8 20V8h6.2c2.6 0 4.2 1.4 4.2 3.5 0 1.6-.9 2.7-2.4 3.2L19.5 20h-3l-2.8-4.8H10.6V20H8Zm2.6-7h3.4c1 0 1.7-.6 1.7-1.5S15 10 14 10h-3.4v3Z" fill="#FAF9F6" />
-        <circle cx="21" cy="8" r="2.2" fill="rgb(var(--amber))" />
+      <svg width="30" height="30" viewBox="0 0 28 28" aria-hidden="true">
+        <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#7df0ff" /><stop offset="1" stopColor="#1596b3" /></linearGradient></defs>
+        <rect width="28" height="28" rx="8" fill="url(#lg)" />
+        <path d="M8 20V8h6.2c2.6 0 4.2 1.4 4.2 3.5 0 1.6-.9 2.7-2.4 3.2L19.5 20h-3l-2.8-4.8H10.6V20H8Zm2.6-7h3.4c1 0 1.7-.6 1.7-1.5S15 10 14 10h-3.4v3Z" fill="#03050A" />
       </svg>
       <span className={light ? "text-white" : "text-ink"}>REDEEM</span>
     </span>

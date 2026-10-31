@@ -2,6 +2,8 @@
 import Link from "next/link";
 import { Composer } from "@/components/Composer";
 import { Icon } from "@/components/Icons";
+import { Intro, Reveal, Starfield, Tilt } from "@/components/Cinematic";
+import { HeroDeck, LiveStats, PipelineSim } from "@/components/Showcase";
 import { SiteNav } from "@/components/SiteNav";
 import { Logo, Tag } from "@/components/ui";
 import { useI18n } from "@/lib/i18n";
@@ -26,14 +28,30 @@ export default function Landing() {
   const { t } = useI18n();
   return (
     <>
+      <Intro />
       <SiteNav />
       <main id="main">
-        <section id="product" className="mx-auto max-w-6xl px-4 pb-10 pt-12 text-center sm:px-6 sm:pt-20">
-          <p className="h-eyebrow">{t("hero.eyebrow")}</p>
-          <h1 className="mx-auto mt-3 max-w-3xl text-[2.5rem] font-extrabold leading-[1.1] tracking-tight sm:text-6xl">{t("hero.title1")}<br /><span className="text-indigo">{t("hero.title2")}</span></h1>
-          <p className="mx-auto mt-5 max-w-2xl text-lg text-muted">{t("hero.sub")}</p>
-          <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row"><a href="#start" className="btn-primary w-full sm:w-auto">{t("hero.cta1")}</a><a href="#how" className="btn-ghost w-full sm:w-auto">{t("hero.cta2")}</a></div>
-          <p className="mt-4 text-sm font-semibold text-muted">One voice. Every domain. Verified outcomes.</p>
+        <section id="product" className="relative overflow-hidden">
+          <Starfield /><div className="grid-floor" aria-hidden="true" />
+          <div className="relative mx-auto grid max-w-6xl items-center gap-6 px-4 pb-16 pt-14 sm:px-6 sm:pt-24 lg:grid-cols-[1.15fr_1fr]">
+            <div className="rise">
+              <p className="h-eyebrow">{t("hero.eyebrow")}</p>
+              <h1 className="mt-4 text-[2.7rem] font-extrabold leading-[1.02] tracking-tighter sm:text-7xl">{t("hero.title1")}<br /><span className="glow-text">{t("hero.title2")}</span></h1>
+              <p className="mt-6 max-w-xl text-lg text-muted">{t("hero.sub")}</p>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row"><a href="#start" className="btn-primary">{t("hero.cta1")}</a><a href="#watch" className="btn-ghost">Watch the engine</a></div>
+              <p className="mt-5 text-sm font-semibold tracking-wide text-muted">One voice. Every domain. Verified outcomes.</p>
+            </div>
+            <div className="rise" style={{ animationDelay: ".25s" }}><HeroDeck /></div>
+          </div>
+        </section>
+
+        <section aria-label="Live counters" className="mx-auto max-w-6xl px-4 pb-6 sm:px-6"><Reveal><LiveStats /></Reveal></section>
+
+        <section id="watch" className="mx-auto grid max-w-6xl scroll-mt-24 gap-8 px-4 py-20 sm:px-6 lg:grid-cols-2">
+          <Reveal from="left"><p className="h-eyebrow">The engine</p><h2 className="mt-3 text-4xl font-extrabold tracking-tight">Watch a mission run.<br /><span className="glow-text">Then check the proof.</span></h2>
+            <p className="mt-4 text-muted">Every step lands in an append-only, hash-chained ledger. Nothing is called done until an independent read-back agrees.</p>
+            <div className="mt-6 flex flex-wrap gap-3"><Link href="/register" className="btn-primary">Run it live</Link><a href="#how" className="btn-ghost">How it works</a></div></Reveal>
+          <Reveal from="right"><PipelineSim /></Reveal>
         </section>
         <div id="start" className="mx-auto max-w-6xl scroll-mt-24 px-4 sm:px-6"><Composer /></div>
 
@@ -44,7 +62,7 @@ export default function Landing() {
 
         <section id="solutions" className="mx-auto max-w-6xl scroll-mt-24 px-4 sm:px-6">
           <h2 className="text-3xl font-extrabold tracking-tight">Eight domains, each with a real workflow</h2><p className="mt-2 max-w-2xl text-muted">Not cards: each has its own intake fields, evidence checklist, escalation ladder and knowledge coverage.</p>
-          <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{DOMAINS.map(([n, d, i]) => (<li key={n} className="card"><span className="grid h-10 w-10 place-items-center rounded-xl bg-teal-soft text-teal"><Icon name={i} size={20} /></span><h3 className="mt-3 font-bold">{n}</h3><p className="mt-1 text-sm text-muted">{d}</p></li>))}</ul>
+          <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{DOMAINS.map(([n, d, i]) => (<li key={n}><Tilt className="card h-full"><span className="grid h-10 w-10 place-items-center rounded-xl bg-teal-soft text-teal"><Icon name={i} size={20} /></span><h3 className="mt-3 font-bold">{n}</h3><p className="mt-1 text-sm text-muted">{d}</p></Tilt></li>))}</ul>
         </section>
 
         <section id="business" className="mx-auto mt-4 grid max-w-6xl scroll-mt-24 gap-4 px-4 pt-12 sm:px-6 md:grid-cols-2">
@@ -68,7 +86,7 @@ export default function Landing() {
           <ul className="mt-6 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">{REAL.map(([name, note, tone]) => (<li key={name} className="flex flex-col gap-1 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold">{name}</p><p className="text-sm text-muted">{note}</p></div><Tag tone={tone}>{tone === "teal" ? "Works (fixtures)" : tone === "amber" ? "Needs credentials" : "Not available"}</Tag></li>))}</ul>
         </section>
 
-        <section className="bg-deep px-4 py-16 text-center text-white sm:px-6"><h2 className="text-3xl font-extrabold tracking-tight">{t("hero.title1")} {t("hero.title2")}</h2><Link href="/register" className="btn mt-6 bg-white text-deep hover:bg-soft">{t("nav.start")}</Link></section>
+        <section className="relative overflow-hidden border-t border-line px-4 py-24 text-center sm:px-6"><Starfield /><h2 className="relative text-4xl font-extrabold tracking-tight sm:text-6xl"><span className="glow-text">{t("hero.title1")} {t("hero.title2")}</span></h2><Link href="/register" className="btn-primary relative mt-8">{t("nav.start")}</Link></section>
       </main>
       <footer className="border-t border-line px-4 py-8 text-sm text-muted sm:px-6"><div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3"><Logo /><p>Built for the Bolna × YC Symphony Buildathon 2026. Not endorsed by Bolna or Y Combinator. Includes MIT-licensed code and data from RESOLVE and RECLAIM.</p></div></footer>
     </>
