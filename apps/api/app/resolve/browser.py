@@ -39,7 +39,13 @@ def browser_available() -> tuple[bool, str]:
         import playwright  # noqa: F401
     except ImportError:
         return False, "playwright is not installed"
-    return (True, "ok") if chromium_path() or os.environ.get("PLAYWRIGHT_BROWSERS_PATH") else (False, "no Chromium binary found (set REDEEM_CHROMIUM)")
+    if chromium_path() or os.environ.get("PLAYWRIGHT_BROWSERS_PATH"):
+        return True, "ok"
+    # `python -m playwright install chromium` puts its managed build in the default cache; Playwright launches it without an explicit path.
+    cache = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "ms-playwright"
+    if any(cache.glob("chromium*")):
+        return True, "ok (playwright-managed chromium)"
+    return False, "no Chromium binary found (set REDEEM_CHROMIUM)"
 
 
 def world_for(tenant_id: str) -> FixtureWorld:
