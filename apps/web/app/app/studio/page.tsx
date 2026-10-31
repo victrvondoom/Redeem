@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Empty, ErrorNote, PageTitle, Tag } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
+import { BriefToPdf } from "@/components/BriefToPdf";
 import { when } from "@/lib/format";
 
 type Doc = { id: string; name: string; sha256: string; size_bytes: number; created_at: number; operation: string; source_ids: string };
@@ -37,6 +38,7 @@ export default function Studio() {
       <section className="card" aria-labelledby="rp-h"><h2 id="rp-h" className="text-lg font-bold">Create a report</h2>
         <div className="mt-3 space-y-3"><div><label className="label" htmlFor="rt">Title</label><input id="rt" className="input" value={title} onChange={(e) => setTitle(e.target.value)} /></div><div><label className="label" htmlFor="rx">Text</label><textarea id="rx" className="input py-3" rows={6} value={text} onChange={(e) => setText(e.target.value)} /></div>
           <button className="btn-primary" disabled={busy || !title.trim() || !text.trim()} onClick={() => void run(async () => { await api("/studio/report", { body: { title, text } }); setTitle(""); setText(""); }, "Report created as a real PDF.")}>Create PDF</button></div></section>
+      <BriefToPdf />
     </div>
   );
 }

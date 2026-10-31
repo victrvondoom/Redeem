@@ -22,9 +22,9 @@ from ..reclaim import docintel
 from ..memory import context as ctx_context
 from ..memory import service as service_memory
 from ..security import vault
-from ..models import ConversationTurn, EncryptionKey, MemoryItem
+from ..models import ConversationTurn, EncryptionKey, ExternalAction, Integration, MemoryItem, OAuthState
 from ..models import BenchmarkRun, BrowserSessionRow, BrowserSnapshot, Case, CaseDraft, CaseEvent, EvidenceClaim, MissionTask
-from ..schemas import ScanIn
+from ..schemas import DocTextIn, ScanIn
 
 router = APIRouter(prefix="/api/v1", tags=["platform"])
 
@@ -36,7 +36,7 @@ MAX_UPLOAD = 5_000_000
 @router.get("/health")
 def health(db=Depends(get_db)):
     db.execute(text("SELECT 1"))
-    return {"status": "ok", "db": "ok", "dialect": db.get_bind().dialect.name, "time": utcnow().isoformat()}
+    return {"status": "ok", "db": "ok", "dialect": db.get_bind().dialect.name, "demo_fixtures": settings.demo_enabled, "time": utcnow().isoformat()}
 
 
 @router.get("/public/stats")
@@ -120,6 +120,16 @@ async def upload(file: UploadFile = File(...), domain: str | None = None, ctx: C
     audit(ctx.db, ctx, "document.upload", d.id)
     ctx.db.commit()
     return {**_doc_json(d), "ingest": info}
+
+
+@router.put("/documents/{doc_id}/text")
+def correct_text(doc_id: str, body: DocTextIn, ctx: Ctx = Depends(current_ctx)):
+    """OCR review: the user's corrected text replaces the extracted text; facts, classification and strength are recomputed. Original bytes are kept."""
+    d = _doc(ctx, doc_id)
+    docintel.reanalyse(d, body.text, "OCR_REVIEWED")
+    audit(ctx.db, ctx, "document.correct_text", doc_id)
+    ctx.db.commit()
+    return _doc_json(d, True)
 
 
 @router.get("/documents")
@@ -260,6 +270,8 @@ def export(ctx: Ctx = Depends(current_ctx)):
         "memory": service_memory.listing(db, ctx),
         "conversation_context": ctx_context.recent(db, ctx, 200),
         "encryption": vault.status(db, t),
+        "integrations": [{"provider": i.provider, "status": i.status, "account": i.account_label, "scopes": i.scopes, "last_verified_at": i.last_verified_at.isoformat() if i.last_verified_at else None} for i in db.scalars(select(Integration).where(Integration.tenant_id == t))],
+        "external_actions": [{"id": a.id, "kind": a.kind, "status": a.status, "provider_ref": a.provider_ref} for a in db.scalars(select(ExternalAction).where(ExternalAction.tenant_id == t))],
         "consents": [{"purpose": c.purpose, "granted": c.granted, "at": c.created_at.isoformat()}
                      for c in db.scalars(select(ConsentRecord).where(ConsentRecord.tenant_id == t))],
     }
@@ -268,7 +280,7 @@ def export(ctx: Ctx = Depends(current_ctx)):
 def _purge_tenant(db, t: str) -> None:
     for model in (BenchmarkRun, CallEvent, VerificationClaim, BrowserSnapshot, BrowserSessionRow, MissionTask, ProviderOperation, ActionApproval, ActionEvent, Action,
                   MissionRevision, Mission, Document, Call, ConsentRecord, FxFault, FxRequest, FxReservation,
-                  FxBooking, FxProduct, FxCustomer, FxCalendarEvent, FxLead, FxCase, FxContact, FxMessage, FxFlightOption, RegSource, Connection, CaseEvent, CaseDraft, EvidenceClaim, Case, MemoryItem, ConversationTurn):
+                  FxBooking, FxProduct, FxCustomer, FxCalendarEvent, FxLead, FxCase, FxContact, FxMessage, FxFlightOption, RegSource, Connection, CaseEvent, CaseDraft, EvidenceClaim, Case, MemoryItem, ConversationTurn, Integration, ExternalAction, OAuthState):
         db.execute(delete(model).where(model.tenant_id == t))
     db.execute(delete(EncryptionKey).where(EncryptionKey.scope == t))  # crypto-shredding: remaining ciphertext copies become unreadable
 

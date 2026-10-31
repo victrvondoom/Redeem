@@ -5,7 +5,7 @@
    "id": "mission-engine",
    "name": "Mission engine: digest-bound approvals, hash-chained ledger, reconcile-not-resend, recovery",
    "status": "verified",
-   "evidence": "apps/api/tests (222 backend tests)",
+   "evidence": "apps/api/tests (backend suite)",
    "source": "REDEEM"
   },
   {
@@ -89,14 +89,7 @@
    "id": "browser-skills",
    "name": "Recorded browser skills (record, edit, parameterise, replay, repair)",
    "status": "not_done",
-   "evidence": "not ported from RESOLVE",
-   "source": "RESOLVE"
-  },
-  {
-   "id": "other-adapters",
-   "name": "Brief-to-PDF, DevOps, Science, Creative adapters; Project Store; OCR; LLM abstraction; local STT",
-   "status": "not_done",
-   "evidence": "not ported; see docs/TASKS_250_STATUS.md",
+   "evidence": "not ported from RESOLVE: recording needs a driver thread for an interactive Playwright session",
    "source": "RESOLVE"
   },
   {
@@ -133,6 +126,41 @@
    "status": "not_done",
    "evidence": "the graph is computed from relational rows; no Neo4j or embeddings",
    "source": "REDEEM"
+  },
+  {
+   "id": "ocr",
+   "name": "Real OCR (RapidOCR/ONNX) for images and scanned PDFs, with review and correction that recomputes facts",
+   "status": "verified",
+   "evidence": "tests/test_ocr.py, apps/web/tests/live.spec.ts",
+   "source": "RECLAIM"
+  },
+  {
+   "id": "brief-pdf",
+   "name": "Brief to PDF: extract structure, edit, render a real PDF stored encrypted with provenance",
+   "status": "verified",
+   "evidence": "tests/test_brief.py, apps/web/tests/live.spec.ts",
+   "source": "RESOLVE"
+  },
+  {
+   "id": "google-adapter",
+   "name": "Google Calendar + Gmail: OAuth, encrypted tokens, refresh, revoke, approved idempotent actions, read-back verification, reconcile-not-resend",
+   "status": "partial",
+   "evidence": "tests/test_integrations.py (11) against an in-process fake of Google's documented endpoints; a live test exists and is skipped without credentials",
+   "source": "REDEEM"
+  },
+  {
+   "id": "demo-separation",
+   "name": "Demo fixtures separated from production: never seeded or runnable when REDEEM_ENV=production",
+   "status": "verified",
+   "evidence": "tests/test_integrations.py::test_production_mode_never_seeds_simulated_data_and_disables_demo_runs",
+   "source": "REDEEM"
+  },
+  {
+   "id": "other-adapters",
+   "name": "DevOps, Science, Creative adapters; Project Store; LLM abstraction; local speech-to-text",
+   "status": "not_done",
+   "evidence": "not ported; LLM needs a key, STT needs a model download",
+   "source": "RESOLVE"
   }
  ]
 }

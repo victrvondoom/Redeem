@@ -4,7 +4,6 @@ duplicate / near-duplicate / version history. Images need OCR; no OCR engine is 
 import hashlib
 import io
 import re
-import shutil
 from pathlib import Path
 
 from sqlalchemy import select
@@ -33,6 +32,7 @@ TYPE_RULES = [
 ]
 
 
+from .. import ocr  # noqa: E402
 from ..security import vault  # noqa: E402
 
 
@@ -55,9 +55,37 @@ def extract_text(filename: str, ctype: str, data: bytes) -> tuple[str | None, in
         except Exception:
             return None, None, "PDF_UNREADABLE", []
         text = "\n".join(pages).strip()
-        return (text or None), len(pages), (None if text else "OCR_UNAVAILABLE_SCANNED_PDF"), pages
-    if ctype.startswith("image/") or low.endswith((".png", ".jpg", ".jpeg")):
-        return None, None, ("OCR_UNAVAILABLE" if not shutil.which("tesseract") else "OCR_NOT_IMPLEMENTED"), []
+        if text:
+            return text, len(pages), None, pages
+        # scanned PDF: OCR the images embedded in each page (no rasterizer needed)
+        if ocr.available():
+            try:
+                from pypdf import PdfReader
+                ocr_pages, confs = [], []
+                for pg in PdfReader(io.BytesIO(data)).pages:
+                    parts = []
+                    for im in pg.images:
+                        t, c = ocr.read_image(im.data)
+                        if t:
+                            parts.append(t)
+                            confs.append(c)
+                    ocr_pages.append("\n".join(parts))
+                joined = "\n".join(ocr_pages).strip()
+                if joined:
+                    return joined, len(ocr_pages), f"OCR:{sum(confs) / len(confs):.2f}", ocr_pages
+            except Exception:
+                pass
+        return None, len(pages), "OCR_NO_TEXT_FOUND" if ocr.available() else "OCR_UNAVAILABLE_SCANNED_PDF", pages
+    if ctype.startswith("image/") or low.endswith((".png", ".jpg", ".jpeg", ".webp", ".bmp")):
+        if not ocr.available():
+            return None, None, "OCR_UNAVAILABLE", []
+        try:
+            t, conf = ocr.read_image(data)
+        except Exception:
+            return None, None, "IMAGE_UNREADABLE", []
+        if not t:
+            return None, 1, "OCR_NO_TEXT_FOUND", []
+        return t, 1, f"OCR:{conf:.2f}", [t]
     return None, None, "UNSUPPORTED_TYPE", []
 
 
@@ -158,3 +186,16 @@ def ingest(db: Session, tenant_id: str, filename: str, ctype: str, data: bytes, 
     if nd:
         d.fields = {**d.fields, "near_duplicate_of": nd}
     return d, {"duplicate": False, "near_duplicate_of": nd, "supersedes": prev.id if prev else None}
+
+
+def reanalyse(d: Document, text: str, status: str) -> Document:
+    """Re-run classification, facts, relevance and strength on corrected text (OCR review). The original file bytes are untouched."""
+    cls = classify(text, d.filename)
+    fl = facts(text, [text], d.domain)
+    rel = profiles.relevance(text, d.domain, d.filename) if d.domain else {"relevant": True, "hits": 0, "reason": "No domain given."}
+    chk = workflows.WF[d.domain]["checklist"] if d.domain in workflows.WF else []
+    d.text_content, d.ocr_status = text, status
+    d.doc_type, d.fields, d.relevance = cls["doc_type"], {**(d.fields or {}), "facts": fl, "classification": cls}, rel
+    d.strength = strength(cls["doc_type"], rel, fl, chk)
+    d.extracted = {**(d.extracted or {}), "booking_refs": sorted(set(re.findall(r"\b[A-Z]{2}\d{3,4}\b", text))), "reviewed_text": status == "OCR_REVIEWED"}
+    return d

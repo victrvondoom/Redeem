@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ErrorNote, PageTitle, Tag } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
+import { Integrations } from "@/components/Integrations";
 
 type H = { provider: string; condition: string; configured: boolean; healthy: boolean; detail: string };
 type Mf = { provider: string; kind: string; auth: string; capabilities: string[]; retry: string; idempotency: string; verification: string; condition: string; notes: string };
@@ -21,6 +22,8 @@ export default function Connections() {
     <div className="mx-auto max-w-4xl space-y-6">
       <PageTitle title="Connections" sub="Every action runs through a connection you can revoke. Revoking stops all further actions on it immediately." />
       <ErrorNote error={error} />
+      <Integrations />
+      <h2 className="text-2xl">Demo fixtures</h2><p className="text-sm text-muted">Local stateful stand-ins used by demo scenarios. They are not real providers and are never mixed with live results.</p>
       <ul className="space-y-3">{items.map((c) => (
         <li key={c.provider} className="card flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div><div className="flex flex-wrap items-center gap-2"><h2 className="font-bold">{c.provider.replaceAll("_", " ")}</h2><Tag tone={c.status === "active" ? "teal" : c.status === "revoked" ? "danger" : "amber"}>{c.status}</Tag><Tag>{c.kind}</Tag></div>

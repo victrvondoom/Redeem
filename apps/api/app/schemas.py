@@ -173,3 +173,76 @@ class MemoryIngestIn(_Strict):
 class MemoryPatchIn(_Strict):
     value: str | None = Field(None, max_length=200)
     pinned: bool | None = None
+
+
+class DocTextIn(_Strict):
+    text: str = Field(min_length=1, max_length=200_000)
+
+
+class GoogleConnectIn(_Strict):
+    capabilities: list[Literal["calendar", "email"]] = Field(min_length=1, max_length=2)
+
+
+class CalendarParams(_Strict):
+    summary: str = Field(min_length=1, max_length=200)
+    start: str = Field(min_length=10, max_length=40)
+    end: str = Field(min_length=10, max_length=40)
+    timezone: str = Field("UTC", max_length=60)
+    description: str = Field("", max_length=2000)
+    attendees: list[str] = Field(default_factory=list, max_length=20)
+
+
+class EmailParams(_Strict):
+    to: list[str] = Field(min_length=1, max_length=10)
+    subject: str = Field(min_length=1, max_length=200)
+    body: str = Field(min_length=1, max_length=20000)
+
+    @field_validator("to")
+    @classmethod
+    def _addr(cls, v):
+        import re
+        for a in v:
+            if not re.fullmatch(r"[^@\s<>,;]+@[^@\s<>,;]+\.[^@\s<>,;]+", a):
+                raise ValueError("invalid email address")
+        return v
+
+
+class ActionCreateIn(_Strict):
+    kind: Literal["calendar.create_event", "email.send"]
+    params: CalendarParams | EmailParams
+
+    @field_validator("params")
+    @classmethod
+    def _match(cls, v, info):
+        k = info.data.get("kind")
+        if (k == "email.send") != isinstance(v, EmailParams):
+            raise ValueError("params do not match kind")
+        return v
+
+
+class ApproveActionIn(_Strict):
+    digest: str = Field(min_length=64, max_length=64)
+
+
+class BriefSection(_Strict):
+    heading: str = Field(min_length=1, max_length=120)
+    paragraphs: list[str] = Field(default_factory=list, max_length=100)
+    bullets: list[str] = Field(default_factory=list, max_length=100)
+
+
+class BriefStructured(_Strict):
+    title: str = Field(min_length=1, max_length=120)
+    sections: list[BriefSection] = Field(default_factory=list, max_length=40)
+    action_items: list[str] = Field(default_factory=list, max_length=40)
+    facts: dict[str, list[str]] = Field(default_factory=dict)
+    source_sha256: str = Field("", max_length=64)
+    word_count: int = 0
+
+
+class BriefExtractIn(_Strict):
+    brief: str = Field(min_length=10, max_length=60000)
+
+
+class BriefRenderIn(_Strict):
+    structured: BriefStructured
+    domain: str | None = Field(None, max_length=30)

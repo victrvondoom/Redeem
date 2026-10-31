@@ -29,3 +29,6 @@ Backend 222, E2E 40. New: conversation_turns (0008), /timeline, /context, /graph
 
 ## UI polish pass (latest)
 Hallmark rules applied as data (skill scripts not executed); `node scripts/ui_floor_check.mjs` = 0 FAIL against the running app. See docs/DESIGN_AUDIT.md. E2E 40 passed.
+
+## Functional completion pass (latest)
+Backend 240 (+1 skipped live test), E2E 43. New: real OCR (RapidOCR) with review, brief-to-PDF, Google OAuth/Calendar/Gmail adapter with approvals and reconcile-not-resend (contract-verified, credential-blocked), Connections Center live providers, demo fixtures off in production, migration 0009. See docs/FINAL_FUNCTIONAL_COMPLETION_REPORT.md and docs/REAL_INTEGRATION_STATUS.md.

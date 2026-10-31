@@ -643,3 +643,51 @@ class ConversationTurn(Base):
     role: Mapped[str] = mapped_column(String(10))  # user | assistant
     text_enc: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+
+class Integration(Base):
+    """A real provider connection (OAuth tokens are envelope-encrypted; never returned by the API)."""
+    __tablename__ = "integrations"
+    __table_args__ = (UniqueConstraint("tenant_id", "provider"),)
+    id: Mapped[str] = _id("int")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    user_id: Mapped[str] = mapped_column(String(40))
+    provider: Mapped[str] = mapped_column(String(20))
+    status: Mapped[str] = mapped_column(String(12), default="connected")  # connected | revoked | error
+    scopes: Mapped[list] = mapped_column(JSON, default=list)
+    account_label: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    token_enc: Mapped[str] = mapped_column(Text)
+    last_verified_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    last_error: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+
+class OAuthState(Base):
+    __tablename__ = "oauth_states"
+    state_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    user_id: Mapped[str] = mapped_column(String(40))
+    provider: Mapped[str] = mapped_column(String(20))
+    scopes: Mapped[list] = mapped_column(JSON, default=list)
+    expires_at: Mapped[datetime] = mapped_column(UTCDateTime)
+
+
+class ExternalAction(Base):
+    """A consequential action on a real provider: draft -> approve (digest-bound) -> execute -> verify by read-back. Params are encrypted."""
+    __tablename__ = "external_actions"
+    __table_args__ = (Index("ix_extact_tenant_status", "tenant_id", "status"),)
+    id: Mapped[str] = _id("xac")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    user_id: Mapped[str] = mapped_column(String(40))
+    provider: Mapped[str] = mapped_column(String(20))
+    kind: Mapped[str] = mapped_column(String(30))  # calendar.create_event | email.send
+    params_enc: Mapped[str] = mapped_column(Text)
+    digest: Mapped[str] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(12), default="DRAFT")  # DRAFT APPROVED EXECUTING DONE VERIFIED UNVERIFIED UNCERTAIN FAILED
+    provider_ref: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    verification: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    error: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    mission_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)

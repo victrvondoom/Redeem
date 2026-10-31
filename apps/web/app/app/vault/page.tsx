@@ -13,6 +13,15 @@ type Detail = D & { text: string; facts: Fact[]; versions: { id: string; version
 const TYPES = ["", "ticket", "booking", "bill", "invoice", "receipt", "statement", "policy", "rejection_letter", "notice", "correspondence", "agreement", "medical_bill", "discharge_summary", "application", "id_proof", "screenshot", "other"];
 const DOMS = ["", "travel", "banking", "insurance", "telecom", "ecommerce", "housing", "government", "healthcare"];
 
+function OcrReview({ id, text, status, onSaved }: { id: string; text: string; status: string; onSaved: (d: Partial<Detail>) => void }) {
+  const [v, setV] = useState(text); const [busy, setBusy] = useState(false); const [msg, setMsg] = useState<string | null>(null);
+  const conf = status.startsWith("OCR:") ? Math.round(parseFloat(status.slice(4)) * 100) : null;
+  return (<div><p className="text-xs font-semibold text-muted">Read from the image{conf !== null ? `, ${conf}% average confidence` : ""}. Correct anything it misread.</p>
+    <textarea aria-label="Corrected text" rows={5} className="input mt-1 py-2 text-sm" value={v} onChange={(e) => setV(e.target.value)} />
+    <button className="btn-ghost mt-2" disabled={busy || !v.trim()} onClick={async () => { setBusy(true); setMsg(null); try { const d = await api<Detail>(`/documents/${id}/text`, { method: "PUT", body: { text: v } }); onSaved(d); setMsg("Saved. Facts and strength were recomputed; the original file is unchanged."); } catch (e) { setMsg(e instanceof Error ? e.message : "Failed"); } finally { setBusy(false); } }}>Save corrected text</button>
+    {msg && <p role="status" className="mt-1 text-sm text-muted">{msg}</p>}</div>);
+}
+
 export default function Vault() {
   const [items, setItems] = useState<D[]>([]); const [total, setTotal] = useState(0); const [error, setError] = useState<string | null>(null); const [notice, setNotice] = useState<string | null>(null);
   const [q, setQ] = useState(""); const [dtype, setDtype] = useState(""); const [domain, setDomain] = useState(""); const [sort, setSort] = useState("created"); const [uploadDomain, setUploadDomain] = useState("");
@@ -54,6 +63,7 @@ export default function Vault() {
             {detail.facts.length > 0 && <div><p className="text-xs font-semibold text-muted">Extracted facts → source</p><ul className="mt-1 space-y-1 text-sm">{detail.facts.filter((f) => f.kind !== "provider").slice(0, 12).map((f, i) => <li key={i}><Tag>{f.kind.replaceAll("_", " ")}</Tag> <strong>{f.display}</strong>{f.quote && <span className="block text-xs text-muted">p.{f.page ?? 1}: {f.quote}</span>}</li>)}</ul></div>}
             {detail.supports_claims.length > 0 && <div><p className="text-xs font-semibold text-muted">Supports claims</p><ul className="mt-1 text-sm">{detail.supports_claims.map((c, i) => <li key={i}><Tag tone="teal">{c.status.toLowerCase()}</Tag> {c.claim} <Link className="text-xs text-indigo underline" href={`/app/cases/${c.case_id}`}>case</Link></li>)}</ul></div>}
             {detail.versions.length > 1 && <div><p className="text-xs font-semibold text-muted">Version history</p><ul className="mt-1 text-xs text-muted">{detail.versions.map((v) => <li key={v.id}>v{v.version}, {v.sha256}, {when(v.created_at)}</li>)}</ul></div>}
+            {detail.ocr_status?.startsWith("OCR") && (<OcrReview id={detail.id} text={detail.text} status={detail.ocr_status} onSaved={(d) => setDetail({ ...detail, ...d })} />)}
             <div><p className="text-xs font-semibold text-muted">Extracted text</p><pre className="mt-1 max-h-72 overflow-auto whitespace-pre-wrap rounded-xl bg-soft p-3 text-xs">{detail.text || (detail.ocr_status ? `No text: ${detail.ocr_status.replaceAll("_", " ")}.` : "No text extracted.")}</pre></div></div>)}</section>
       </div>
     </div>

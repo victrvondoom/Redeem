@@ -44,7 +44,8 @@ def register(body: RegisterIn, request: Request, response: Response, db: Session
     db.add(ws)
     db.flush()
     db.add(Membership(user_id=user.id, tenant_id=tenant.id, workspace_id=ws.id, role="owner"))
-    seed_tenant(db, tenant.id)
+    if settings.demo_enabled:  # demo fixtures (simulated bookings, shop, CRM) are never seeded into a production workspace
+        seed_tenant(db, tenant.id)
     csrf = _open_session(db, user, response)
     audit(db, None, "auth.register", user.id, tenant_id=tenant.id)
     db.commit()

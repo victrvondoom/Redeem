@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     bolna_agent_id: str = Field("", validation_alias="BOLNA_AGENT_ID")
     bolna_base_url: str = Field("https://api.bolna.ai", validation_alias="BOLNA_BASE_URL")
     bolna_webhook_secret: str = Field("", validation_alias="BOLNA_WEBHOOK_SECRET")
+    google_client_id: str = Field("", validation_alias="GOOGLE_OAUTH_CLIENT_ID")
+    google_client_secret: str = Field("", validation_alias="GOOGLE_OAUTH_CLIENT_SECRET")
+    google_redirect_uri: str = Field("", validation_alias="GOOGLE_OAUTH_REDIRECT_URI")
     bolna_timeout_seconds: float = Field(10.0, validation_alias="BOLNA_TIMEOUT_SECONDS")
     # Bolna does not sign webhooks; optionally restrict by source IP (comma-separated). Empty = off.
     bolna_webhook_allowed_ips: str = Field("", validation_alias="BOLNA_WEBHOOK_ALLOWED_IPS")
@@ -28,8 +31,16 @@ class Settings(BaseSettings):
 
     register_rate_limit_per_minute: int = Field(10, validation_alias="REDEEM_REGISTER_RATE_LIMIT")
     # Evaluation-only: lets the benchmark disable one control at a time. Never enable in production.
+    demo_fixtures: bool = Field(True, validation_alias="REDEEM_DEMO_FIXTURES")  # forced off when REDEEM_ENV=production unless explicitly set
     eval_mode: bool = Field(False, validation_alias="REDEEM_EVAL_MODE")
     isolated_browser_runtime_url: str = Field("", validation_alias="REDEEM_ISOLATED_BROWSER_URL")
+
+    @property
+    def demo_enabled(self) -> bool:
+        import os
+        if "REDEEM_DEMO_FIXTURES" in os.environ:
+            return self.demo_fixtures
+        return os.environ.get("REDEEM_ENV", "").lower() != "production"
 
     @property
     def bolna_configured(self) -> bool:

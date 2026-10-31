@@ -5,6 +5,7 @@ from fastapi.responses import Response
 from sqlalchemy import func, select
 
 from ..connectors.registry import manifests
+from ..config import settings
 from ..core.deps import Ctx, audit, current_ctx, err
 from ..db import utcnow
 from ..evidence import center
@@ -120,6 +121,8 @@ def connector_health(ctx: Ctx = Depends(current_ctx)):
 # ---------------------------------------------------------------- demo environment
 @router.post("/demo/scenarios/{scenario}/run", status_code=201)
 def run_demo(scenario: str, ctx: Ctx = Depends(current_ctx)):
+    if not settings.demo_enabled:
+        raise err(403, "demo_disabled", "Demo scenarios are disabled in this deployment (they run on simulated fixtures).")
     if scenario not in ("a", "b", "c", "d"):
         raise err(404, "not_found", "Unknown scenario")
     audit(ctx.db, ctx, "demo.run", scenario)
@@ -128,6 +131,8 @@ def run_demo(scenario: str, ctx: Ctx = Depends(current_ctx)):
 
 @router.post("/demo/reset")
 def reset_demo(ctx: Ctx = Depends(current_ctx)):
+    if not settings.demo_enabled:
+        raise err(403, "demo_disabled", "Demo scenarios are disabled in this deployment.")
     audit(ctx.db, ctx, "demo.reset")
     demo.reset_fixtures(ctx.db, ctx.tenant_id)
     return {"reset": True, "note": "Fixture data re-seeded. Your missions are kept."}

@@ -184,7 +184,7 @@ def test_duplicate_near_duplicate_versions_pdf_and_ocr_blocked_state(api):
     assert pd["page_count"] == 1 and "INV-77" in pd["text"] and pd["doc_type"] in ("invoice", "receipt")
     img = up(api, v["id"], "scan.png", b"\x89PNG\r\n\x1a\nfake", "image/png").json()
     im = api.get(f"{B}/documents/{img['document_id']}").json()
-    assert im["ocr_status"] == "OCR_UNAVAILABLE" and im["text"] == "" and im["fact_count"] == 0    # never invents text for an image
+    assert im["ocr_status"] == "IMAGE_UNREADABLE" and im["text"] == "" and im["fact_count"] == 0    # a corrupt image is reported as unreadable and never yields invented text (real OCR runs on valid images: tests/test_ocr.py)
 
 
 def test_irrelevant_documents_are_flagged_not_used_as_evidence(api):
