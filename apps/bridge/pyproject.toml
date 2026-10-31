@@ -1,0 +1,16 @@
+[project]
+name = "redeem-bridge"
+version = "0.1.0"
+description = "REDEEM Computer Bridge: lets REDEEM see and operate a computer you paired, with visible control and an emergency stop."
+requires-python = ">=3.10"
+dependencies = ["mss>=9", "websockets>=13", "python-xlib>=0.33; sys_platform == 'linux'", "uiautomation>=2.0; sys_platform == 'win32'"]
+
+[project.scripts]
+redeem-bridge = "redeem_bridge.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["redeem_bridge", "redeem_bridge.platforms"]

@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from .api import auth, brief, cases, history, integrations, memory, misc, missions, ops, privacy, skills_projects, voice, workspace
+from .api import auth, brief, cases, computer, history, integrations, memory, misc, missions, ops, privacy, skills_projects, voice, workspace
 from .db import SessionLocal, init_db
 from .orchestration.engine import EngineError, recover_incomplete
 
@@ -21,14 +21,22 @@ async def lifespan(app: FastAPI):
         fixed = recover_incomplete(db)
         if fixed:
             log.warning("recovered %d interrupted dispatches", len(fixed))
+        from .computer.recovery import recover as _recover_computer
+        n = _recover_computer(db)
+        if n:
+            log.warning("marked %d interrupted computer tasks/actions uncertain", n)
     yield
+    from .computer import cloud as _cloud
+    _cloud.stop_all()
     from .resolve import browser as _rb
     _rb.shutdown_all()
 
 
 app = FastAPI(title="REDEEM API", version="0.1.0", lifespan=lifespan)
-for r in (auth.router, missions.router, voice.router, misc.router, ops.router, cases.router, workspace.router, memory.router, privacy.router, history.router, integrations.router, brief.router, skills_projects.router):
+for r in (auth.router, missions.router, voice.router, misc.router, ops.router, cases.router, workspace.router, memory.router, privacy.router, history.router, integrations.router, brief.router, skills_projects.router, computer.router):
     app.include_router(r)
+from .computer import demo_crm as _demo_crm  # noqa: E402
+app.include_router(_demo_crm.router)
 
 
 @app.middleware("http")

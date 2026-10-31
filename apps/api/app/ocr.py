@@ -46,3 +46,16 @@ def read_image(data: bytes) -> tuple[str, float]:
             lines.append([b])
     text = "\n".join(" ".join(t[2] for t in sorted(ln, key=lambda t: t[1])) for ln in lines)
     return text, round(sum(b[3] for b in boxes) / len(boxes), 3)
+
+
+def read_boxes(data: bytes) -> list[dict]:
+    """Every detected text run with its pixel box in the image: [{text, x, y, w, h, conf}]. Used to ground UI targets."""
+    import numpy as np
+    from PIL import Image
+    img = Image.open(io.BytesIO(data)).convert("RGB")
+    res, _ = _get()(np.array(img))
+    out = []
+    for quad, text, conf in res or []:
+        xs, ys = [p[0] for p in quad], [p[1] for p in quad]
+        out.append({"text": text, "x": int(min(xs)), "y": int(min(ys)), "w": int(max(xs) - min(xs)), "h": int(max(ys) - min(ys)), "conf": round(float(conf), 3)})
+    return out

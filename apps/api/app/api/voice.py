@@ -237,6 +237,8 @@ async def voice_tool(tool: str, request: Request, token: str = Query("", max_len
             _cx.record(db, mctx, "voice", "assistant", r["clarification"], call.id)
         db.commit()
         return {"saved": [s["field"] for s in r["saved"]], "needs_confirmation": r["needs_confirmation"], "ambiguous": r["ambiguous"], "ask_user": r["clarification"]}
+    if tool.startswith("computer_"):
+        return _computer_tool(db, call, tool, args)
     if tool == "start_mission":
         intent = str(args.get("intent", ""))[:2000]
         if len(intent) < 3:
@@ -287,3 +289,52 @@ async def voice_tool(tool: str, request: Request, token: str = Query("", max_len
             db.commit()
         return {"understood": True, "status": m.status, "revision": m.revision, "needs": (m.clarification or {}).get("message")}
     raise err(404, "unknown_tool", "Unknown tool")
+
+
+def _computer_tool(db, call: Call, tool: str, args: dict) -> dict:
+    """Voice control plane for the computer agent. The tenant and user come from the call row; the computer must
+    already be connected and a session open in the REDEEM app (the person saw and started it)."""
+    from ..api.computer import apply_control, create_task
+    from ..models import ComputerSession, ComputerTask
+    s = db.scalar(select(ComputerSession).where(ComputerSession.tenant_id == call.tenant_id, ComputerSession.user_id == call.user_id,
+                                                ComputerSession.status.in_(["ACTIVE", "PAUSED", "USER_CONTROL"])).order_by(ComputerSession.created_at.desc()))
+    if not s:
+        return {"ok": False, "say": "No computer is connected right now. Open REDEEM, choose Live Computer and connect your computer first."}
+    last = db.scalar(select(ComputerTask).where(ComputerTask.session_id == s.id).order_by(ComputerTask.created_at.desc()))
+    if tool == "computer_task":
+        instr = str(args.get("instruction", "")).strip()[:1000]
+        if len(instr) < 3:
+            raise err(422, "invalid_args", "instruction required")
+        t = create_task(db, s, instr, source="voice", call_id=call.id)
+        return {"ok": True, "task_id": t.id, "say": "I'm on it. You can watch it on the Live Computer screen; say pause, stop or let me take over at any time."}
+    if tool == "computer_control":
+        op = {"pause": "pause", "stop": "stop", "take over": "takeover", "takeover": "takeover", "continue": "resume", "resume": "resume", "hand back": "release"}.get(str(args.get("op", "")).lower())
+        if not op:
+            raise err(422, "invalid_args", "op must be pause, resume, stop, takeover or hand back")
+        if op == "resume" and s.status == "USER_CONTROL":
+            op = "release"
+        apply_control(db, s, op)
+        return {"ok": True, "status": s.status, "say": {"pause": "Paused. Nothing will be clicked until you say continue.", "stop": "Stopped. I won't touch the computer again in this session.",
+                                                         "takeover": "You have control. I've stopped sending input.", "resume": "Continuing. I'm looking at the screen again first.",
+                                                         "release": "Thanks, I have it back. I'm looking at the screen again first."}[op]}
+    if tool == "computer_status":
+        if not last:
+            return {"ok": True, "status": s.status, "say": "No task has run on this computer yet."}
+        db.refresh(last)
+        rep = last.report or {}
+        pa = last.pending_approval if last.status == "NEEDS_APPROVAL" else None
+        return {"ok": True, "task_id": last.id, "status": last.status, "step": last.step, "summary": rep.get("summary"),
+                "approval": {"digest": pa["digest"], "describe": f"{pa['action']} on '{(pa.get('target') or {}).get('label')}'"} if pa else None,
+                "say": rep.get("summary") or f"Still working: {last.step or 'starting'}."}
+    if tool == "computer_approve":
+        if not last or last.status != "NEEDS_APPROVAL" or str(args.get("digest", "")) != (last.pending_approval or {}).get("digest"):
+            return {"ok": False, "say": "Nothing is waiting for that approval, or the action changed. Ask me for the status again."}
+        if str(args.get("confirmed", "")).lower() not in ("true", "yes", "1"):
+            return {"ok": False, "say": "I need a clear yes from you before I do that."}
+        from ..computer import agent
+        last.pending_approval = {**last.pending_approval, "approved_digest": last.pending_approval["digest"], "approved_by": "voice", "call_id": call.id}
+        last.status = "RUNNING"
+        db.commit()
+        agent.start(last.id)
+        return {"ok": True, "say": "Approved. Doing exactly that now."}
+    raise err(404, "unknown_tool", "No such tool")
