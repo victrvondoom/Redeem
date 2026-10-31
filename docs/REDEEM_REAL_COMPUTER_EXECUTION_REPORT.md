@@ -16,3 +16,22 @@ farzaa/clicky (MIT) is a macOS menu-bar app: ScreenCaptureKit capture, push-to-t
 
 ## Limits / missing authorizations
 No live Bolna call (no BOLNA_API_KEY/AGENT_ID/WEBHOOK_SECRET). No vision/LLM model (rule-based OCR planner). Live view is ~1 fps frames, not WebRTC. Cloud isolation is process-level, not VM. File Explorer/PDF and case-portal scenarios not built (see docs/STATIC_TODO.md).
+
+## Dynamic scenarios pass (branch agent/redeem-computer-dynamic)
+Numbers below are copied from the actual runs of this pass (pytest output), not estimated.
+
+| Check | Result |
+|---|---|
+| `python -m pytest -q` (apps/api, Linux, Xvfb available) | 272 passed, 1 skipped, **1 failed** (476.95 s) |
+| The failure | `tests/test_sprint4.py::test_exported_agent_tools_match_the_endpoints_and_accept_bolna_flat_bodies`: pre-existing at base commit d09971c (it lists 8 Bolna tools; d09971c added 4 `computer_*` tools). Not modified in this pass. |
+| `ruff check .` | passed |
+| `tests/test_scenarios.py` (headless API + DB) | 14 passed |
+| `tests/test_portal_live.py::test_portal_scenario_fills_form_waits_for_exact_approval_then_submits` (real Xvfb + Chromium + bridge, Linux) | passed in an earlier targeted run (52.98 s); also part of the full run above |
+| `alembic upgrade head` + `alembic check` on a fresh DB | "No new upgrade operations detected" |
+| `npx tsc --noEmit` (apps/web) | passed |
+| `npx eslint app/app/computer` | 0 errors, 2 warnings (set-state-in-effect) |
+| `next build`, Playwright (all specs), Windows `windows-bridge` CI | **Not run** |
+| File Explorer + PDF scenario | **Not built** (catalog says not runnable; API returns 501) |
+| Vision provider live test | **Not run** (no credentials; status endpoint reports PROVIDER_NOT_CONFIGURED) |
+| Windows interactive UI automation | **Not run** |
+| ProofGraph dynamic configuration | **Not started** (ProofGraph commit 90dd975 is not in this repository) |

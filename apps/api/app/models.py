@@ -827,8 +827,69 @@ class ComputerTask(Base):
     step: Mapped[str | None] = mapped_column(String(80), nullable=True)
     report: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     pending_approval: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    scenario_id: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True)  # catalog entry this run executes (None for free-form tasks)
+    scenario_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+
+class ComputerScenario(Base):
+    """Database-backed scenario catalog. tenant_id NULL = built-in entry visible to every workspace (read-only for tenants)."""
+
+    __tablename__ = "computer_scenarios"
+    __table_args__ = (UniqueConstraint("tenant_id", "key", name="uq_scenario_tenant_key"),)
+    id: Mapped[str] = _id("scn")
+    tenant_id: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True)
+    key: Mapped[str] = mapped_column(String(60))
+    name: Mapped[str] = mapped_column(String(120))
+    description: Mapped[str] = mapped_column(Text, default="")
+    category: Mapped[str] = mapped_column(String(40), default="general")
+    required_capabilities: Mapped[list] = mapped_column(JSON, default=list)
+    required_os: Mapped[str] = mapped_column(String(16), default="any")  # any | windows | linux | macos
+    parameter_schema: Mapped[dict] = mapped_column(JSON, default=dict)  # JSON Schema subset, validated with jsonschema
+    steps: Mapped[list] = mapped_column(JSON, default=list)  # typed operations from the approved vocabulary (app/computer/scenarios.py)
+    expected_result: Mapped[str] = mapped_column(Text, default="")
+    verification: Mapped[list] = mapped_column(JSON, default=list)
+    approvals: Mapped[list] = mapped_column(JSON, default=list)
+    executor: Mapped[str | None] = mapped_column(String(40), nullable=True)  # agent intent kind that runs it; None = not directly runnable
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_by: Mapped[str] = mapped_column(String(60), default="system")
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+
+class ComputerScenarioVersion(Base):
+    __tablename__ = "computer_scenario_versions"
+    __table_args__ = (UniqueConstraint("scenario_id", "version", name="uq_scenario_version"),)
+    id: Mapped[str] = _id("scv")
+    scenario_id: Mapped[str] = mapped_column(String(40), index=True)
+    version: Mapped[int] = mapped_column(Integer)
+    snapshot: Mapped[dict] = mapped_column(JSON)
+    changed_by: Mapped[str] = mapped_column(String(60), default="system")
+    reason: Mapped[str] = mapped_column(String(300), default="")
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+
+class PortalSubmission(Base):
+    """A submission made through the REDEEM-owned case portal (a first-party execution target, NOT an external filing)."""
+
+    __tablename__ = "portal_submissions"
+    __table_args__ = (UniqueConstraint("workspace_key", "payload_digest", name="uq_portal_payload"),)
+    id: Mapped[str] = _id("psb")
+    tenant_id: Mapped[str] = mapped_column(String(40), index=True)
+    workspace_key: Mapped[str] = mapped_column(String(40), index=True)
+    case_ref: Mapped[str] = mapped_column(String(60))
+    portal_id: Mapped[str] = mapped_column(String(40), default="redeem-case-portal")
+    form_version: Mapped[str] = mapped_column(String(10), default="1")
+    fields: Mapped[dict] = mapped_column(JSON, default=dict)
+    documents: Mapped[list] = mapped_column(JSON, default=list)
+    payload_digest: Mapped[str] = mapped_column(String(64))
+    approval_ref: Mapped[str | None] = mapped_column(String(64), nullable=True)  # digest of the computer-task approval that authorised the click
+    status: Mapped[str] = mapped_column(String(16), default="RECEIVED")
+    acknowledgement_id: Mapped[str] = mapped_column(String(24))
+    portal_response: Mapped[dict] = mapped_column(JSON, default=dict)
+    submitted_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
 
 
 class ComputerAction(Base):

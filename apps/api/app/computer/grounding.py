@@ -42,6 +42,15 @@ def has(frame: ComputerFrame, phrase: str) -> bool:
     return n in _norm(" ".join(e["text"] for e in elements(frame))) or any(n in _norm(e["text"]) for e in elements(frame))
 
 
+def has_fuzzy(frame: ComputerFrame, phrase: str, ratio: float = 0.8) -> bool:
+    """Tolerates OCR slips in long identifiers: true if one OCR run shares a contiguous stretch of >= ratio of the phrase."""
+    from difflib import SequenceMatcher
+    n = _norm(phrase)
+    if not n:
+        return False
+    return any(SequenceMatcher(None, n, _norm(e["text"]), autojunk=False).find_longest_match(0, len(n), 0, len(_norm(e["text"]))).size >= ratio * len(n) for e in elements(frame))
+
+
 def find(frame: ComputerFrame, label: str, min_conf: float = 0.5, below_y: int | None = None, lowest: bool = False) -> dict | None:
     """Best element whose text matches label: exact > starts-with > contains. Returns a grounded target."""
     n = _norm(label)

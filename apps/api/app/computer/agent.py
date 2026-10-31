@@ -14,8 +14,8 @@ import time
 from sqlalchemy import select
 
 from ..db import SessionLocal, utcnow
-from ..models import ComputerFrame, ComputerSession, ComputerTask, DemoCrmContact
-from . import demo_crm
+from ..models import Case, ComputerFrame, ComputerSession, ComputerTask, DemoCrmContact, Document, PortalSubmission
+from . import demo_crm, portal
 from . import grounding as G
 from .pipeline import Refused, perform
 
@@ -32,6 +32,31 @@ class Replan(Exception):
 
 class Missing(Exception):
     pass
+
+
+class BadParams(ValueError):
+    pass
+
+
+def supports(kind: str) -> bool:
+    """True if this agent really implements the intent (used by the scenario catalog to report runnable vs not built)."""
+    return hasattr(Loop, f"do_{kind}") and kind not in ("unsupported",)
+
+
+def intent_for(kind: str, params: dict, tenant_id: str, db) -> dict:
+    """Turn validated scenario parameters into the intent the loop executes. Values come from the caller or the caller's own records."""
+    if kind == "crm_update":
+        fu = {"date": params["followup_date"], "time": params.get("followup_time", "10:00")} if params.get("followup_date") else None
+        return {"kind": kind, "name": params["name"], "method": params.get("method"), "followup": fu, "draft": params.get("draft") or None, "send": bool(params.get("send"))}
+    if kind == "portal_case":
+        c = db.scalar(select(Case).where(Case.id == params["case_id"], Case.tenant_id == tenant_id))  # tenant filter: another workspace's case is "not found"
+        if not c:
+            raise BadParams("Case not found in this workspace")
+        docs = [d.filename for d in db.scalars(select(Document).where(Document.case_id == c.id, Document.tenant_id == tenant_id).order_by(Document.created_at))]
+        amount = f"{c.claimed_paise / 100:.2f}".rstrip("0").rstrip(".") if c.claimed_paise else ""  # unknown stays empty; never guessed
+        summary = c.title + (f" ({c.provider})" if c.provider else "")
+        return {"kind": kind, "case_id": c.id, "payload": portal.payload(c.id, params.get("department", "Customer Relations"), summary, amount, docs[:5])}
+    raise BadParams(f"{kind} cannot be started from a scenario")
 
 
 def parse(instruction: str) -> dict:
@@ -161,9 +186,21 @@ class Loop:
                 return v
             time.sleep(0.7)
 
+    def expect_fuzzy(self, phrase, timeout=4.0) -> dict:
+        end = time.time() + timeout
+        while True:
+            f = self.observe()
+            ok = G.has_fuzzy(f, phrase)
+            if ok or time.time() > end:
+                v = {"expected": phrase, "observed": ok, "frame_id": f.id, "method": "ocr_fuzzy"}
+                self.note(("verified: " if ok else "not verified: ") + phrase[:40], verification=v)
+                return v
+            time.sleep(0.7)
+
     # ------------------------------------------------------------ intents
     def run(self):
-        it = parse(self.task.instruction)
+        pre = self.task.intent or {}
+        it = pre if (self.task.scenario_id and pre.get("kind")) else parse(self.task.instruction)  # scenario runs carry validated parameters
         self.task.intent, self.task.status = it, "RUNNING"
         self.note("understood the request", intent=it)
         try:
@@ -325,6 +362,76 @@ class Loop:
         summary = (f"Updated {name}: preferred contact {method or 'unchanged'}" + (f", follow-up {fu['date']} {fu['time']}" if fu else "") +
                    (", draft saved" if draft else "") + (". The message was sent (simulated demo send) after your approval." if it.get("send") and c and c.sent else ". The message was NOT sent.") + ("" if ok else " Some values could not be confirmed after reload."))
         self.finish("DONE" if ok else "UNCERTAIN", summary, checks=checks, after_reload=reload_checks, stored_state=stored)
+
+    # ------------------------------------------------------------ consumer case via the REDEEM-owned portal
+    def do_portal_case(self, it):
+        p = it["payload"]
+        key = portal.workspace_key(self.db, self.task.tenant_id)
+        dg = portal.payload_digest(p)
+        base = (self._crm_base(key)).replace("/demo/crm/", "/portal/")
+
+        def stored():
+            self.db.expire_all()
+            return self.db.scalar(select(PortalSubmission).where(PortalSubmission.workspace_key == key, PortalSubmission.payload_digest == dg))
+        if stored():  # reconcile, never resend
+            r = stored()
+            return self.finish("DONE", f"This exact request was already received by the REDEEM case portal as {r.acknowledgement_id}. Nothing was submitted again.", acknowledgement_id=r.acknowledgement_id)
+        fields = [("Case reference", p["case_ref"], 38), ("Claim summary", p["claim_summary"], 38), ("Amount claimed in INR", p["amount_inr"], 38), ("Supporting documents", ", ".join(p["documents"]), 38)]
+        for _ in range(40):
+            try:
+                if self.ctl():
+                    continue
+                f = self.observe()
+                if not G.has(f, "Case request form"):
+                    self.note("portal not on screen: opening it")
+                    self.act("open_url", {"url": base}, "open the REDEEM case portal")
+                    self.expect("Case request form", timeout=12)
+                    continue
+                todo = next(((lab, val, dy) for lab, val, dy in fields if val and not G.has_fuzzy(f, val[:30])), None)
+                if todo:
+                    lab, val, dy = todo
+                    h = G.find(f, lab)
+                    if not h:
+                        raise Missing(f"could not find the '{lab}' field")
+                    self.act("click_element", {"x": h["x"], "y": h["y"] + dy}, f"focus the '{lab}' field", target={**h, "label": lab})
+                    self.type(val, f"enter {lab}")
+                    self.expect_fuzzy(val[:30], timeout=4)
+                    continue
+                if not G.has(f, f"Selected department: {p['department']}"):
+                    self.click(p["department"], f"choose the {p['department']} department")
+                    self.expect(f"Selected department: {p['department']}", timeout=4)
+                    continue
+                break  # every field is visible on screen with the intended value
+            except Replan:
+                self.note("state changed: re-planning from the current screen")
+        else:
+            return self.finish("FAILED", "Could not fill the form completely; nothing was submitted.")
+        shown = self.observe()
+        t = self.ground("Submit request")
+        t = {**t, "label": f"Submit request [payload {dg[:16]}]"}  # the approval digest covers the label, so it is bound to this exact payload
+        try:
+            self.act("click_element", {"x": t["x"], "y": t["y"]}, "submit the completed request (needs your approval of the exact values)", target=t, approved=self.approved())
+        except Refused as e:
+            if e.code == "approval_required":
+                self.task.pending_approval = {**(self.task.pending_approval or {}), "payload": p, "payload_digest": dg, "form_frame_id": shown.id,
+                                              "portal": "REDEEM case portal (first-party; not an external filing)"}
+                self.db.commit()
+            raise
+        for _ in range(10):
+            time.sleep(0.8)
+            if stored():
+                break
+        r = stored()
+        if not r:
+            return self.finish("UNCERTAIN", "I clicked Submit but could not find a stored submission. I will not submit again; check the portal.", payload_digest=dg)
+        r.approval_ref = self.approved()
+        self.db.commit()
+        seen = G.has(self.observe(), r.acknowledgement_id)
+        ok = r.payload_digest == dg
+        self.finish("DONE" if ok else "UNCERTAIN", f"Submitted to the REDEEM case portal (a first-party system, not an external filing). Acknowledgement {r.acknowledgement_id}"
+                    + (" is shown on screen" if seen else " was stored but could not be read on screen") + ". The stored submission was retrieved independently and "
+                    + ("matches the approved values." if ok else "DOES NOT match the approved values."),
+                    acknowledgement_id=r.acknowledgement_id, submission_id=r.id, payload_digest=dg, checks=[{"expected": "acknowledgement on screen", "observed": seen}, {"expected": "stored payload equals approved payload", "observed": ok}])
 
     def _crm_base(self, key):
         import os

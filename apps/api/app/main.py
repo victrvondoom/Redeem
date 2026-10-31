@@ -37,6 +37,8 @@ for r in (auth.router, missions.router, voice.router, misc.router, ops.router, c
     app.include_router(r)
 from .computer import demo_crm as _demo_crm  # noqa: E402
 app.include_router(_demo_crm.router)
+from .computer import portal as _portal  # noqa: E402
+app.include_router(_portal.router)
 
 
 @app.middleware("http")
